@@ -525,13 +525,10 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
                     if not self._check_min_cycle():
                         return
 
-            if force:
-                # Ignore the tolerance when switched on manually
-                dry_tolerance: float = 0
-                wet_tolerance: float = 0
-            else:
-                dry_tolerance = self._dry_tolerance
-                wet_tolerance = self._wet_tolerance
+            # Always use configured tolerances
+            # (force only bypasses min_cycle_duration, not tolerance)
+            dry_tolerance = self._dry_tolerance
+            wet_tolerance = self._wet_tolerance
 
             if TYPE_CHECKING:
                 assert self._target_humidity is not None
