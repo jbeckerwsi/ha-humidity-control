@@ -1,0 +1,117 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Feuchtigkeitsregelung",
+        "description": "Kombinierte Feuchtigkeitsregelung (Befeuchter/Entfeuchter) einrichten",
+        "data": {
+          "name": "Name",
+          "target_sensor": "Feuchtigkeitssensor",
+          "wet_entity": "Befeuchter-Entität (switch/input_boolean)",
+          "dry_entity": "Entfeuchter-Entität (switch/input_boolean)"
+        },
+        "data_description": {
+          "name": "Name für diese Feuchtigkeitsregelungs-Entität",
+          "target_sensor": "Der zu überwachende Feuchtigkeitssensor",
+          "wet_entity": "Entität, die eingeschaltet wird, wenn die Feuchtigkeit zu niedrig ist (optional)",
+          "dry_entity": "Entität, die eingeschaltet wird, wenn die Feuchtigkeit zu hoch ist (optional)"
+        }
+      },
+      "options": {
+        "title": "Optionen",
+        "description": "Zusätzliche Einstellungen für die Feuchtigkeitsregelung konfigurieren",
+        "data": {
+          "wet_entity": "Befeuchter-Entität",
+          "dry_entity": "Entfeuchter-Entität",
+          "dry_tolerance": "Trockentoleranz",
+          "wet_tolerance": "Feuchttoleranz",
+          "min_humidity": "Minimale Feuchtigkeit",
+          "max_humidity": "Maximale Feuchtigkeit",
+          "target_humidity": "Ziel-Feuchtigkeit",
+          "min_cycle_duration": "Minimale Zyklusdauer",
+          "keep_alive": "Keep-Alive-Intervall",
+          "sensor_stale_duration": "Sensor-Timeout",
+          "initial_state": "Beim Start aktivieren",
+          "away_humidity": "Abwesenheits-Feuchtigkeit",
+          "away_fixed": "Feste Abwesenheits-Feuchtigkeit"
+        },
+        "data_description": {
+          "dry_tolerance": "Wie weit unter dem Zielwert, bevor die Befeuchtung startet",
+          "wet_tolerance": "Wie weit über dem Zielwert, bevor die Entfeuchtung startet",
+          "min_humidity": "Minimal einstellbare Feuchtigkeit",
+          "max_humidity": "Maximal einstellbare Feuchtigkeit",
+          "target_humidity": "Anfängliche Ziel-Feuchtigkeit",
+          "min_cycle_duration": "Mindestzeit zwischen Ein-/Ausschalten",
+          "keep_alive": "Intervall zum erneuten Senden von Befehlen an Geräte",
+          "sensor_stale_duration": "Ausschalten, wenn der Sensor innerhalb dieser Zeit nicht aktualisiert",
+          "initial_state": "Ob beim Start von Home Assistant aktiviert werden soll",
+          "away_humidity": "Ziel-Feuchtigkeit im Abwesenheitsmodus",
+          "away_fixed": "Wenn aktiviert, kann die Abwesenheits-Feuchtigkeit nicht geändert werden"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Diese Feuchtigkeitsregelung ist bereits konfiguriert"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Optionen",
+        "description": "Einstellungen der Feuchtigkeitsregelung konfigurieren",
+        "data": {
+          "wet_entity": "Befeuchter-Entität",
+          "dry_entity": "Entfeuchter-Entität",
+          "dry_tolerance": "Trockentoleranz",
+          "wet_tolerance": "Feuchttoleranz",
+          "min_humidity": "Minimale Feuchtigkeit",
+          "max_humidity": "Maximale Feuchtigkeit",
+          "target_humidity": "Ziel-Feuchtigkeit",
+          "min_cycle_duration": "Minimale Zyklusdauer",
+          "keep_alive": "Keep-Alive-Intervall",
+          "sensor_stale_duration": "Sensor-Timeout",
+          "initial_state": "Beim Start aktivieren",
+          "away_humidity": "Abwesenheits-Feuchtigkeit",
+          "away_fixed": "Feste Abwesenheits-Feuchtigkeit"
+        },
+        "data_description": {
+          "dry_tolerance": "Wie weit unter dem Zielwert, bevor die Befeuchtung startet",
+          "wet_tolerance": "Wie weit über dem Zielwert, bevor die Entfeuchtung startet",
+          "min_humidity": "Minimal einstellbare Feuchtigkeit",
+          "max_humidity": "Maximal einstellbare Feuchtigkeit",
+          "target_humidity": "Anfängliche Ziel-Feuchtigkeit",
+          "min_cycle_duration": "Mindestzeit zwischen Ein-/Ausschalten",
+          "keep_alive": "Intervall zum erneuten Senden von Befehlen an Geräte",
+          "sensor_stale_duration": "Ausschalten, wenn der Sensor innerhalb dieser Zeit nicht aktualisiert",
+          "initial_state": "Ob beim Start von Home Assistant aktiviert werden soll",
+          "away_humidity": "Ziel-Feuchtigkeit im Abwesenheitsmodus",
+          "away_fixed": "Wenn aktiviert, kann die Abwesenheits-Feuchtigkeit nicht geändert werden"
+        }
+      }
+    }
+  },
+  "entity": {
+    "humidifier": {
+      "humidity_control": {
+        "state_attributes": {
+          "operating_mode": {
+            "name": "Betriebsmodus",
+            "state": {
+              "idle": "Leerlauf",
+              "wet": "Befeuchten",
+              "dry": "Entfeuchten"
+            }
+          }
+        }
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "normal": "Normal",
+        "away": "Abwesend"
+      }
+    }
+  }
+}

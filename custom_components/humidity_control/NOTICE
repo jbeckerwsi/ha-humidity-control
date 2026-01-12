@@ -1,0 +1,22 @@
+Humidity Control - Combined Humidifier/Dehumidifier Integration for Home Assistant
+
+This integration is a derivative work based on the Generic Hygrostat component
+from Home Assistant Core.
+
+Original work:
+  Home Assistant Core - Generic Hygrostat Integration
+  Copyright Home Assistant Contributors
+  Licensed under the Apache License, Version 2.0
+  https://github.com/home-assistant/core
+
+Changes made from the original work:
+  - Combined humidifier and dehumidifier control into a single entity
+  - Added three operating modes: idle, wet (humidifying), dry (dehumidifying)
+  - Support for separate output entities for wet and dry operations
+  - Support for boolean entities (input_boolean) and switches as outputs
+  - Modified control logic to handle both humidifying and dehumidifying
+  - Removed device_class based single-direction logic
+  - Added mode-based action reporting (HUMIDIFYING, DRYING, IDLE)
+
+For the original license, see:
+  https://github.com/home-assistant/core/blob/dev/LICENSE.md

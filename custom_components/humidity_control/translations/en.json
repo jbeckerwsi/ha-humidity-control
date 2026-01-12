@@ -1,0 +1,117 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Humidity Control",
+        "description": "Set up a combined humidity control (humidifier/dehumidifier)",
+        "data": {
+          "name": "Name",
+          "target_sensor": "Humidity sensor",
+          "wet_entity": "Humidifier entity (switch/input_boolean)",
+          "dry_entity": "Dehumidifier entity (switch/input_boolean)"
+        },
+        "data_description": {
+          "name": "Name for this humidity control entity",
+          "target_sensor": "The humidity sensor to monitor",
+          "wet_entity": "Entity to turn on when humidity is too low (optional)",
+          "dry_entity": "Entity to turn on when humidity is too high (optional)"
+        }
+      },
+      "options": {
+        "title": "Options",
+        "description": "Configure additional settings for humidity control",
+        "data": {
+          "wet_entity": "Humidifier entity",
+          "dry_entity": "Dehumidifier entity",
+          "dry_tolerance": "Dry tolerance",
+          "wet_tolerance": "Wet tolerance",
+          "min_humidity": "Minimum humidity",
+          "max_humidity": "Maximum humidity",
+          "target_humidity": "Target humidity",
+          "min_cycle_duration": "Minimum cycle duration",
+          "keep_alive": "Keep alive interval",
+          "sensor_stale_duration": "Sensor stale duration",
+          "initial_state": "Start enabled",
+          "away_humidity": "Away humidity",
+          "away_fixed": "Fixed away humidity"
+        },
+        "data_description": {
+          "dry_tolerance": "How far below target before humidifying starts",
+          "wet_tolerance": "How far above target before dehumidifying starts",
+          "min_humidity": "Minimum settable humidity",
+          "max_humidity": "Maximum settable humidity",
+          "target_humidity": "Initial target humidity",
+          "min_cycle_duration": "Minimum time between switching on/off",
+          "keep_alive": "Interval to resend commands to devices",
+          "sensor_stale_duration": "Turn off if sensor doesn't update within this time",
+          "initial_state": "Whether to start enabled when Home Assistant starts",
+          "away_humidity": "Target humidity when in away mode",
+          "away_fixed": "If enabled, away humidity cannot be changed"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This humidity control is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "description": "Configure humidity control settings",
+        "data": {
+          "wet_entity": "Humidifier entity",
+          "dry_entity": "Dehumidifier entity",
+          "dry_tolerance": "Dry tolerance",
+          "wet_tolerance": "Wet tolerance",
+          "min_humidity": "Minimum humidity",
+          "max_humidity": "Maximum humidity",
+          "target_humidity": "Target humidity",
+          "min_cycle_duration": "Minimum cycle duration",
+          "keep_alive": "Keep alive interval",
+          "sensor_stale_duration": "Sensor stale duration",
+          "initial_state": "Start enabled",
+          "away_humidity": "Away humidity",
+          "away_fixed": "Fixed away humidity"
+        },
+        "data_description": {
+          "dry_tolerance": "How far below target before humidifying starts",
+          "wet_tolerance": "How far above target before dehumidifying starts",
+          "min_humidity": "Minimum settable humidity",
+          "max_humidity": "Maximum settable humidity",
+          "target_humidity": "Initial target humidity",
+          "min_cycle_duration": "Minimum time between switching on/off",
+          "keep_alive": "Interval to resend commands to devices",
+          "sensor_stale_duration": "Turn off if sensor doesn't update within this time",
+          "initial_state": "Whether to start enabled when Home Assistant starts",
+          "away_humidity": "Target humidity when in away mode",
+          "away_fixed": "If enabled, away humidity cannot be changed"
+        }
+      }
+    }
+  },
+  "entity": {
+    "humidifier": {
+      "humidity_control": {
+        "state_attributes": {
+          "operating_mode": {
+            "name": "Operating mode",
+            "state": {
+              "idle": "Idle",
+              "wet": "Humidifying",
+              "dry": "Dehumidifying"
+            }
+          }
+        }
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "normal": "Normal",
+        "away": "Away"
+      }
+    }
+  }
+}
