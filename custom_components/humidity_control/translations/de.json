@@ -6,23 +6,17 @@
         "description": "Kombinierte Feuchtigkeitsregelung (Befeuchter/Entfeuchter) einrichten",
         "data": {
           "name": "Name",
-          "target_sensor": "Feuchtigkeitssensor",
-          "wet_entity": "Befeuchter-Entität (switch/input_boolean)",
-          "dry_entity": "Entfeuchter-Entität (switch/input_boolean)"
+          "target_sensor": "Feuchtigkeitssensor"
         },
         "data_description": {
           "name": "Name für diese Feuchtigkeitsregelungs-Entität",
-          "target_sensor": "Der zu überwachende Feuchtigkeitssensor",
-          "wet_entity": "Entität, die eingeschaltet wird, wenn die Feuchtigkeit zu niedrig ist (optional)",
-          "dry_entity": "Entität, die eingeschaltet wird, wenn die Feuchtigkeit zu hoch ist (optional)"
+          "target_sensor": "Der zu überwachende Feuchtigkeitssensor"
         }
       },
       "options": {
         "title": "Optionen",
         "description": "Zusätzliche Einstellungen für die Feuchtigkeitsregelung konfigurieren",
         "data": {
-          "wet_entity": "Befeuchter-Entität",
-          "dry_entity": "Entfeuchter-Entität",
           "dry_tolerance": "Trockentoleranz",
           "wet_tolerance": "Feuchttoleranz",
           "min_humidity": "Minimale Feuchtigkeit",
@@ -60,8 +54,6 @@
         "title": "Optionen",
         "description": "Einstellungen der Feuchtigkeitsregelung konfigurieren",
         "data": {
-          "wet_entity": "Befeuchter-Entität",
-          "dry_entity": "Entfeuchter-Entität",
           "dry_tolerance": "Trockentoleranz",
           "wet_tolerance": "Feuchttoleranz",
           "min_humidity": "Minimale Feuchtigkeit",

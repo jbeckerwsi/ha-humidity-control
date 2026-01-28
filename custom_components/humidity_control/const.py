@@ -21,10 +21,6 @@ CONF_AWAY_FIXED = "away_fixed"
 CONF_STALE_DURATION = "sensor_stale_duration"
 CONF_MIN_DUR = "min_cycle_duration"
 
-# Output entity configuration - Humidifier (legacy on/off)
-CONF_WET_ENTITY = "wet_entity"
-CONF_DRY_ENTITY = "dry_entity"
-
 # Configuration keys - Multi-level humidifier
 CONF_HUMIDIFIER_POWER_ENTITY = "humidifier_power_entity"
 CONF_HUMIDIFIER_LEVEL_ENTITY = "humidifier_level_entity"

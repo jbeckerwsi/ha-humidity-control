@@ -6,15 +6,11 @@
         "description": "Set up a unified air quality and humidity controller",
         "data": {
           "name": "Name",
-          "target_sensor": "Humidity sensor",
-          "wet_entity": "Humidifier entity (legacy)",
-          "dry_entity": "Dehumidifier entity (legacy)"
+          "target_sensor": "Humidity sensor"
         },
         "data_description": {
           "name": "Name for this humidity control entity",
-          "target_sensor": "The humidity sensor to monitor",
-          "wet_entity": "Legacy on/off humidifier entity (optional, use multi-level humidifier instead)",
-          "dry_entity": "Legacy on/off dehumidifier entity (optional)"
+          "target_sensor": "The humidity sensor to monitor"
         }
       },
       "humidifier": {
@@ -71,8 +67,6 @@
         "title": "Humidity Options",
         "description": "Configure humidity control settings and tolerances",
         "data": {
-          "wet_entity": "Humidifier entity (legacy)",
-          "dry_entity": "Dehumidifier entity (legacy)",
           "dry_tolerance": "Dry tolerance",
           "wet_tolerance": "Wet tolerance",
           "min_humidity": "Minimum humidity",
@@ -86,8 +80,6 @@
           "away_fixed": "Fixed away humidity"
         },
         "data_description": {
-          "wet_entity": "Legacy on/off humidifier entity",
-          "dry_entity": "Legacy on/off dehumidifier entity",
           "dry_tolerance": "How far below target before humidifying starts",
           "wet_tolerance": "How far above target before dehumidifying starts",
           "min_humidity": "Minimum settable humidity",
@@ -135,8 +127,6 @@
         "title": "Humidity Settings",
         "description": "Configure humidity control settings and tolerances",
         "data": {
-          "wet_entity": "Humidifier entity (legacy)",
-          "dry_entity": "Dehumidifier entity (legacy)",
           "dry_tolerance": "Dry tolerance",
           "wet_tolerance": "Wet tolerance",
           "min_humidity": "Minimum humidity",
@@ -150,8 +140,6 @@
           "away_fixed": "Fixed away humidity"
         },
         "data_description": {
-          "wet_entity": "Legacy on/off humidifier entity",
-          "dry_entity": "Legacy on/off dehumidifier entity",
           "dry_tolerance": "How far below target before humidifying starts",
           "wet_tolerance": "How far above target before dehumidifying starts",
           "min_humidity": "Minimum settable humidity",

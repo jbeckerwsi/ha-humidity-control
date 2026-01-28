@@ -35,7 +35,6 @@ from .const import (
     CONF_CO2_CRITICAL,
     CONF_CO2_SENSOR,
     CONF_CO2_TARGET,
-    CONF_DRY_ENTITY,
     CONF_DRY_TOLERANCE,
     CONF_HUMIDIFIER_LEVEL_ENTITY,
     CONF_HUMIDIFIER_LEVELS,
@@ -57,7 +56,6 @@ from .const import (
     CONF_VOC_CRITICAL,
     CONF_VOC_SENSOR,
     CONF_VOC_TARGET,
-    CONF_WET_ENTITY,
     CONF_WET_TOLERANCE,
     DEFAULT_CO2_CRITICAL,
     DEFAULT_CO2_TARGET,
@@ -82,17 +80,6 @@ CONFIG_SCHEMA = vol.Schema(
             selector.EntitySelectorConfig(
                 domain=SENSOR_DOMAIN,
                 device_class=SensorDeviceClass.HUMIDITY,
-            )
-        ),
-        # Legacy on/off entities
-        vol.Optional(CONF_WET_ENTITY): selector.EntitySelector(
-            selector.EntitySelectorConfig(
-                domain=["switch", "input_boolean"],
-            )
-        ),
-        vol.Optional(CONF_DRY_ENTITY): selector.EntitySelector(
-            selector.EntitySelectorConfig(
-                domain=["switch", "input_boolean"],
             )
         ),
     }
@@ -224,16 +211,6 @@ VENTILATION_SCHEMA = vol.Schema(
 # Schema for options (editable after setup)
 OPTIONS_SCHEMA = vol.Schema(
     {
-        vol.Optional(CONF_WET_ENTITY): selector.EntitySelector(
-            selector.EntitySelectorConfig(
-                domain=["switch", "input_boolean"],
-            )
-        ),
-        vol.Optional(CONF_DRY_ENTITY): selector.EntitySelector(
-            selector.EntitySelectorConfig(
-                domain=["switch", "input_boolean"],
-            )
-        ),
         vol.Required(CONF_DRY_TOLERANCE, default=DEFAULT_TOLERANCE): selector.NumberSelector(
             selector.NumberSelectorConfig(
                 min=0,

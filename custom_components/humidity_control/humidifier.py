@@ -106,7 +106,6 @@ from .const import (
     CONF_CO2_CRITICAL,
     CONF_CO2_SENSOR,
     CONF_CO2_TARGET,
-    CONF_DRY_ENTITY,
     CONF_DRY_TOLERANCE,
     CONF_HUMIDIFIER_LEVEL_ENTITY,
     CONF_HUMIDIFIER_LEVELS,
@@ -128,7 +127,6 @@ from .const import (
     CONF_VOC_CRITICAL,
     CONF_VOC_SENSOR,
     CONF_VOC_TARGET,
-    CONF_WET_ENTITY,
     CONF_WET_TOLERANCE,
     DEFAULT_BOOST_DURATION,
     DEFAULT_CO2_CRITICAL,
@@ -230,8 +228,6 @@ async def _async_setup_config(
 ) -> None:
     name: str = config[CONF_NAME]
     sensor_entity_id: str = config[CONF_SENSOR]
-    wet_entity_id: str | None = config.get(CONF_WET_ENTITY)
-    dry_entity_id: str | None = config.get(CONF_DRY_ENTITY)
     min_humidity: float | None = config.get(CONF_MIN_HUMIDITY)
     max_humidity: float | None = config.get(CONF_MAX_HUMIDITY)
     target_humidity: float | None = config.get(CONF_TARGET_HUMIDITY)
@@ -284,8 +280,6 @@ async def _async_setup_config(
                 hass,
                 name=name,
                 sensor_entity_id=sensor_entity_id,
-                wet_entity_id=wet_entity_id,
-                dry_entity_id=dry_entity_id,
                 min_humidity=min_humidity,
                 max_humidity=max_humidity,
                 target_humidity=target_humidity,
@@ -331,8 +325,6 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         *,
         name: str,
         sensor_entity_id: str,
-        wet_entity_id: str | None,
-        dry_entity_id: str | None,
         min_humidity: float | None,
         max_humidity: float | None,
         target_humidity: float | None,
@@ -366,8 +358,6 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         """Initialize the humidity control."""
         self._name = name
         self._sensor_entity_id = sensor_entity_id
-        self._wet_entity_id = wet_entity_id
-        self._dry_entity_id = dry_entity_id
         self._device_class = HumidifierDeviceClass.HUMIDIFIER
         self._min_cycle_duration = min_cycle_duration
         self._dry_tolerance = dry_tolerance
@@ -466,22 +456,6 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
             self.async_on_remove(
                 async_track_state_change_event(
                     self.hass, self._voc_sensor, self._async_voc_sensor_event
-                )
-            )
-
-        # Track wet entity state changes (legacy)
-        if self._wet_entity_id:
-            self.async_on_remove(
-                async_track_state_change_event(
-                    self.hass, self._wet_entity_id, self._async_output_event
-                )
-            )
-
-        # Track dry entity state changes (legacy)
-        if self._dry_entity_id:
-            self.async_on_remove(
-                async_track_state_change_event(
-                    self.hass, self._dry_entity_id, self._async_output_event
                 )
             )
 
@@ -1226,15 +1200,6 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
 
     async def _async_set_humidifier_level(self, level_index: int) -> None:
         """Set the humidifier power and level."""
-        # Handle legacy wet entity
-        if self._wet_entity_id and not self._humidifier_power_entity:
-            if level_index > 0:
-                await self._async_entity_turn_on(self._wet_entity_id)
-            else:
-                await self._async_entity_turn_off(self._wet_entity_id)
-            return
-
-        # Handle multi-level humidifier
         if not self._humidifier_power_entity:
             return
 
@@ -1270,48 +1235,21 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         self._last_humidifier_change = dt_util.utcnow()
 
     # =========================================================================
-    # Legacy/Helper Methods
+    # Helper Methods
     # =========================================================================
 
     def _check_min_cycle(self) -> bool:
         """Check if min_cycle_duration has elapsed for active entities."""
-        # Check wet entity
-        if self._wet_entity_id and self._is_wet_active:
-            current_state = STATE_ON
-            if not condition.state(
-                self.hass,
-                self._wet_entity_id,
-                current_state,
-                self._min_cycle_duration,
-            ):
-                return False
+        # Check humidifier power entity
+        if not self._humidifier_power_entity or not self._is_humidifier_power_on:
+            return True
 
-        # Check dry entity
-        if self._dry_entity_id and self._is_dry_active:
-            current_state = STATE_ON
-            if not condition.state(
-                self.hass,
-                self._dry_entity_id,
-                current_state,
-                self._min_cycle_duration,
-            ):
-                return False
-
-        return True
-
-    @property
-    def _is_wet_active(self) -> bool:
-        """Check if the wet entity is currently active."""
-        if not self._wet_entity_id:
-            return False
-        return self.hass.states.is_state(self._wet_entity_id, STATE_ON)
-
-    @property
-    def _is_dry_active(self) -> bool:
-        """Check if the dry entity is currently active."""
-        if not self._dry_entity_id:
-            return False
-        return self.hass.states.is_state(self._dry_entity_id, STATE_ON)
+        return condition.state(
+            self.hass,
+            self._humidifier_power_entity,
+            STATE_ON,
+            self._min_cycle_duration,
+        )
 
     @property
     def _is_humidifier_power_on(self) -> bool:
@@ -1336,12 +1274,6 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
 
     async def _async_turn_off_all(self) -> None:
         """Turn off all output entities."""
-        # Legacy entities
-        if self._is_wet_active:
-            await self._async_entity_turn_off(self._wet_entity_id)
-        if self._is_dry_active:
-            await self._async_entity_turn_off(self._dry_entity_id)
-
         # Multi-level humidifier
         if self._is_humidifier_power_on:
             await self._async_entity_turn_off(self._humidifier_power_entity)

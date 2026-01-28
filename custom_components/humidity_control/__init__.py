@@ -31,7 +31,6 @@ from .const import (
     CONF_CO2_CRITICAL,
     CONF_CO2_SENSOR,
     CONF_CO2_TARGET,
-    CONF_DRY_ENTITY,
     CONF_DRY_TOLERANCE,
     CONF_HUMIDIFIER_LEVEL_ENTITY,
     CONF_HUMIDIFIER_LEVELS,
@@ -53,7 +52,6 @@ from .const import (
     CONF_VOC_CRITICAL,
     CONF_VOC_SENSOR,
     CONF_VOC_TARGET,
-    CONF_WET_ENTITY,
     CONF_WET_TOLERANCE,
     DEFAULT_CO2_CRITICAL,
     DEFAULT_CO2_TARGET,
@@ -78,9 +76,6 @@ HUMIDITY_CONTROL_SCHEMA = vol.Schema(
     {
         # Required - Humidity sensor
         vol.Required(CONF_SENSOR): cv.entity_id,
-        # Legacy output entities (on/off humidifier/dehumidifier)
-        vol.Optional(CONF_WET_ENTITY): cv.entity_id,
-        vol.Optional(CONF_DRY_ENTITY): cv.entity_id,
         # Multi-level humidifier (Robby)
         vol.Optional(CONF_HUMIDIFIER_POWER_ENTITY): cv.entity_id,
         vol.Optional(CONF_HUMIDIFIER_LEVEL_ENTITY): cv.entity_id,
