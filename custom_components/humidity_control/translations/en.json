@@ -53,13 +53,11 @@
         "data": {
           "ventilation_entity": "Ventilation entity",
           "ventilation_levels": "Ventilation fan levels",
-          "humidity_dehumidify_threshold": "Dehumidify humidity threshold (%)",
           "humidity_dehumidify_critical": "Critical humidity threshold (%)"
         },
         "data_description": {
           "ventilation_entity": "Climate or fan entity for ventilation (e.g., climate.nilan_hvac)",
           "ventilation_levels": "Available fan levels from off (0) to maximum",
-          "humidity_dehumidify_threshold": "Humidity level above which dehumidification starts (default: 48%)",
           "humidity_dehumidify_critical": "Humidity level requiring maximum ventilation (default: 55%)"
         }
       },
@@ -193,13 +191,11 @@
         "data": {
           "ventilation_entity": "Ventilation entity",
           "ventilation_levels": "Ventilation fan levels",
-          "humidity_dehumidify_threshold": "Dehumidify humidity threshold (%)",
           "humidity_dehumidify_critical": "Critical humidity threshold (%)"
         },
         "data_description": {
           "ventilation_entity": "Climate or fan entity for ventilation",
           "ventilation_levels": "Available fan levels from off (0) to maximum",
-          "humidity_dehumidify_threshold": "Humidity level above which dehumidification starts",
           "humidity_dehumidify_critical": "Humidity level requiring maximum ventilation"
         }
       },

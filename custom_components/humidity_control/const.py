@@ -37,7 +37,6 @@ CONF_VOC_CRITICAL = "voc_critical"
 # Configuration keys - Ventilation
 CONF_VENTILATION_ENTITY = "ventilation_entity"
 CONF_VENTILATION_LEVELS = "ventilation_levels"
-CONF_HUMIDITY_DEHUMIDIFY_THRESHOLD = "humidity_dehumidify_threshold"
 CONF_HUMIDITY_DEHUMIDIFY_CRITICAL = "humidity_dehumidify_critical"
 
 # Configuration keys - Timing
@@ -54,7 +53,6 @@ DEFAULT_CO2_TARGET = 600
 DEFAULT_CO2_CRITICAL = 900
 DEFAULT_VOC_TARGET = 100
 DEFAULT_VOC_CRITICAL = 350
-DEFAULT_HUMIDITY_DEHUMIDIFY_THRESHOLD = 48
 DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL = 55
 DEFAULT_HUMIDIFIER_LEVELS = ["Auto", "Low", "Medium", "High"]
 DEFAULT_VENTILATION_LEVELS = ["0", "1", "2", "3", "4"]

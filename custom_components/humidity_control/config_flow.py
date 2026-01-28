@@ -40,7 +40,6 @@ from .const import (
     CONF_HUMIDIFIER_LEVELS,
     CONF_HUMIDIFIER_POWER_ENTITY,
     CONF_HUMIDITY_DEHUMIDIFY_CRITICAL,
-    CONF_HUMIDITY_DEHUMIDIFY_THRESHOLD,
     CONF_INITIAL_STATE,
     CONF_KEEP_ALIVE,
     CONF_MAX_HUMIDITY,
@@ -61,7 +60,6 @@ from .const import (
     DEFAULT_CO2_TARGET,
     DEFAULT_HUMIDIFIER_LEVELS,
     DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL,
-    DEFAULT_HUMIDITY_DEHUMIDIFY_THRESHOLD,
     DEFAULT_MIN_HUMIDIFY_DURATION,
     DEFAULT_MIN_VENTILATE_DURATION,
     DEFAULT_NAME,
@@ -179,18 +177,6 @@ VENTILATION_SCHEMA = vol.Schema(
                 multiple=True,
                 custom_value=True,
                 mode=selector.SelectSelectorMode.LIST,
-            )
-        ),
-        vol.Optional(
-            CONF_HUMIDITY_DEHUMIDIFY_THRESHOLD,
-            default=DEFAULT_HUMIDITY_DEHUMIDIFY_THRESHOLD,
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=30,
-                max=70,
-                step=1,
-                unit_of_measurement=PERCENTAGE,
-                mode=selector.NumberSelectorMode.BOX,
             )
         ),
         vol.Optional(

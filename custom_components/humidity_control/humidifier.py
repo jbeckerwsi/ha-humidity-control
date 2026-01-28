@@ -111,7 +111,6 @@ from .const import (
     CONF_HUMIDIFIER_LEVELS,
     CONF_HUMIDIFIER_POWER_ENTITY,
     CONF_HUMIDITY_DEHUMIDIFY_CRITICAL,
-    CONF_HUMIDITY_DEHUMIDIFY_THRESHOLD,
     CONF_INITIAL_STATE,
     CONF_KEEP_ALIVE,
     CONF_MAX_HUMIDITY,
@@ -133,7 +132,6 @@ from .const import (
     DEFAULT_CO2_TARGET,
     DEFAULT_HUMIDIFIER_LEVELS,
     DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL,
-    DEFAULT_HUMIDITY_DEHUMIDIFY_THRESHOLD,
     DEFAULT_MIN_HUMIDIFY_DURATION,
     DEFAULT_MIN_VENTILATE_DURATION,
     DEFAULT_VENTILATION_LEVELS,
@@ -256,9 +254,6 @@ async def _async_setup_config(
     # Ventilation config
     ventilation_entity: str | None = config.get(CONF_VENTILATION_ENTITY)
     ventilation_levels: list[str] = config.get(CONF_VENTILATION_LEVELS, DEFAULT_VENTILATION_LEVELS)
-    humidity_dehumidify_threshold: float = config.get(
-        CONF_HUMIDITY_DEHUMIDIFY_THRESHOLD, DEFAULT_HUMIDITY_DEHUMIDIFY_THRESHOLD
-    )
     humidity_dehumidify_critical: float = config.get(
         CONF_HUMIDITY_DEHUMIDIFY_CRITICAL, DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL
     )
@@ -304,7 +299,6 @@ async def _async_setup_config(
                 voc_critical=voc_critical,
                 ventilation_entity=ventilation_entity,
                 ventilation_levels=ventilation_levels,
-                humidity_dehumidify_threshold=humidity_dehumidify_threshold,
                 humidity_dehumidify_critical=humidity_dehumidify_critical,
                 min_humidify_duration=min_humidify_duration,
                 min_ventilate_duration=min_ventilate_duration,
@@ -349,7 +343,6 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         voc_critical: int,
         ventilation_entity: str | None,
         ventilation_levels: list[str],
-        humidity_dehumidify_threshold: float,
         humidity_dehumidify_critical: float,
         min_humidify_duration: int,
         min_ventilate_duration: int,
@@ -405,7 +398,6 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         # New: Ventilation control (Nilan)
         self._ventilation_entity = ventilation_entity
         self._ventilation_levels = ventilation_levels
-        self._humidity_dehumidify_threshold = humidity_dehumidify_threshold
         self._humidity_dehumidify_critical = humidity_dehumidify_critical
         self._current_ventilation_level: int = 0
         self._ventilation_reason: str = VENT_REASON_NONE
@@ -982,23 +974,31 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         return level, True
 
     def _is_dehumidify_needed(self) -> bool:
-        """Check if dehumidification is needed."""
-        if self._cur_humidity is None:
+        """Check if dehumidification is needed.
+
+        Dehumidification starts when humidity exceeds target + wet_tolerance.
+        """
+        if self._cur_humidity is None or self._target_humidity is None:
             return False
-        return self._cur_humidity >= self._humidity_dehumidify_threshold
+        dehumidify_threshold = self._target_humidity + self._wet_tolerance
+        return self._cur_humidity >= dehumidify_threshold
 
     def _calculate_dehumidify_ventilation(self) -> tuple[int, str]:
         """Calculate ventilation level for dehumidification.
 
+        Uses target + wet_tolerance as the dehumidification start threshold.
+        Scales proportionally up to critical level for max ventilation.
+
         Returns:
             Tuple of (level 0-4, reason string)
         """
-        if self._cur_humidity is None:
+        if self._cur_humidity is None or self._target_humidity is None:
             return 0, VENT_REASON_NONE
 
+        dehumidify_threshold = self._target_humidity + self._wet_tolerance
         max_levels = len(self._ventilation_levels) - 1
-        humidity_range = self._humidity_dehumidify_critical - self._humidity_dehumidify_threshold
-        humidity_excess = self._cur_humidity - self._humidity_dehumidify_threshold
+        humidity_range = self._humidity_dehumidify_critical - dehumidify_threshold
+        humidity_excess = self._cur_humidity - dehumidify_threshold
 
         if humidity_excess <= 0:
             return 0, VENT_REASON_NONE
