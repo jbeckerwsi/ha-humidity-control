@@ -1,34 +1,41 @@
-# Humidity Control - Combined Humidifier/Dehumidifier for Home Assistant
+# Humidity Control - Unified Indoor Air Quality Controller for Home Assistant
 
-A custom Home Assistant integration that provides combined humidity control with both humidifying and dehumidifying capabilities in a single entity.
-
-## License
-
-This integration is licensed under the **Apache License 2.0**.
-
-This is a derivative work based on the [Generic Hygrostat](https://github.com/home-assistant/core/tree/dev/homeassistant/components/generic_hygrostat) component from Home Assistant Core.
-
-**Original work:**
-- Home Assistant Core - Generic Hygrostat Integration
-- Copyright Home Assistant Contributors
-- Licensed under the Apache License, Version 2.0
-- https://github.com/home-assistant/core
-
-See the [NOTICE](custom_components/humidity_control/NOTICE) file for details on changes made.
+A custom Home Assistant integration that provides unified indoor air quality control, managing humidity, CO2, and VOC levels through coordinated humidifier and ventilation control.
 
 ## Features
 
-- **Combined Control**: Single entity controls both humidifier and dehumidifier
-- **Three Operating Modes**: 
-  - `idle` - Within target humidity range, no action needed
-  - `wet` - Humidifying to increase humidity
-  - `dry` - Dehumidifying to decrease humidity
-- **Flexible Output Entities**: Supports both `switch` and `input_boolean` entities as outputs
-- **Tolerance Settings**: Configurable dry and wet tolerances to prevent rapid cycling
-- **Away Mode**: Optional away humidity setting for when you're not home
-- **Sensor Stale Detection**: Safety feature to turn off when sensor stops responding
-- **Keep-Alive**: Periodic signals for devices that need regular commands
-- **Min Cycle Duration**: Prevents rapid on/off cycling
+### Humidity Control
+- **Multi-level Humidifier Support**: Control humidifiers with multiple fan speeds (e.g., Robby with power switch + level selector)
+- **Dehumidification via Ventilation**: Use HVAC/ventilation systems to reduce humidity
+- **Target Range**: Maintain humidity between configurable thresholds (default: 40-46%)
+- **Critical Protection**: Cap ventilation when humidity drops critically low (<35%)
+
+### Air Quality Control
+- **CO2 Monitoring**: Target 600ppm, critical threshold 900ppm
+- **VOC Monitoring**: Target 100, critical threshold 350
+- **Proportional Control**: Fan speeds scale based on how far readings are from targets
+- **Simultaneous Operation**: Humidifier and ventilation can run together (e.g., high CO2 but low humidity)
+
+### Boost Mode
+- **Rapid Air Exchange**: Maximum ventilation for configurable duration (5-60 minutes)
+- **Multiple Triggers**: Activate via service call or input_boolean helper
+- **Auto-Restore**: Returns to normal operation after boost ends
+
+### Safety Features
+- **Minimum Action Durations**: Prevent rapid cycling of humidifier and ventilation
+- **Sensor Stale Detection**: Turn off when sensors stop responding
+- **Conflict Resolution**: Automatically balance competing needs (humidity vs air quality)
+
+## Operating Modes
+
+| Mode | Description |
+|------|-------------|
+| `idle` | All readings within target range |
+| `humidifying` | Humidity below target, humidifier active |
+| `dehumidifying` | Humidity above threshold, ventilation active |
+| `ventilating` | CO2/VOC elevated, ventilation active |
+| `ventilating_and_humidifying` | Air quality needs ventilation, but humidity also low |
+| `boost` | Manual boost mode active |
 
 ## Installation
 
@@ -53,176 +60,309 @@ See the [NOTICE](custom_components/humidity_control/NOTICE) file for details on 
 1. Go to **Settings** → **Devices & Services**
 2. Click **+ Add Integration**
 3. Search for "Humidity Control"
-4. Follow the setup wizard:
-   - Enter a name
-   - Select your humidity sensor
-   - Select humidifier entity (optional)
-   - Select dehumidifier entity (optional)
-   - Configure tolerances and other options
+4. Follow the multi-step setup wizard:
+   - **Basic**: Name and humidity sensor
+   - **Humidifier**: Power entity, level entity, available levels
+   - **Air Quality**: CO2/VOC sensors and thresholds
+   - **Ventilation**: Climate entity, fan levels, dehumidification thresholds
+   - **Timing**: Minimum action durations, boost helper
 
 ### YAML Configuration
 
-Alternatively, add to your `configuration.yaml`:
-
 ```yaml
 humidity_control:
-  - name: "Living Room Humidity"
-    target_sensor: sensor.living_room_humidity
-    wet_entity: switch.humidifier
-    dry_entity: switch.dehumidifier
-    target_humidity: 50
+  - name: "Living Room Air Quality"
+    # Required - Humidity sensor
+    target_sensor: sensor.bme680_humidity
+    target_humidity: 43
     min_humidity: 30
-    max_humidity: 70
-    dry_tolerance: 3
-    wet_tolerance: 3
+    max_humidity: 60
+    
+    # Multi-level humidifier (Robby)
+    humidifier_power_entity: switch.robby_power
+    humidifier_level_entity: select.robby_fan_level
+    humidifier_levels:
+      - "1"
+      - "2"
+      - "3"
+    
+    # Air quality sensors
+    co2_sensor: sensor.mh_z19_co2_value
+    co2_target: 600
+    co2_critical: 900
+    voc_sensor: sensor.voc
+    voc_target: 100
+    voc_critical: 350
+    
+    # Ventilation control (Nilan HVAC)
+    ventilation_entity: climate.nilan_hvac
+    ventilation_levels:
+      - "0"
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+    humidity_dehumidify_threshold: 48
+    humidity_dehumidify_critical: 35
+    
+    # Timing
+    min_humidify_duration: 300  # 5 minutes
+    min_ventilate_duration: 180  # 3 minutes
+    
+    # Boost mode helper (optional)
+    boost_helper: input_boolean.air_quality_boost
 ```
 
 ### Configuration Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `name` | No | "Humidity Control" | Name of the entity |
-| `target_sensor` | **Yes** | - | Entity ID of the humidity sensor |
-| `wet_entity` | No | - | Entity ID of the humidifier switch/input_boolean |
-| `dry_entity` | No | - | Entity ID of the dehumidifier switch/input_boolean |
-| `target_humidity` | No | - | Initial target humidity |
-| `min_humidity` | No | 0 | Minimum settable humidity |
-| `max_humidity` | No | 100 | Maximum settable humidity |
-| `dry_tolerance` | No | 3 | How far below target before humidifying starts |
-| `wet_tolerance` | No | 3 | How far above target before dehumidifying starts |
-| `min_cycle_duration` | No | - | Minimum time between switching (e.g., `00:05:00`) |
-| `keep_alive` | No | - | Interval to resend commands (e.g., `00:03:00`) |
-| `initial_state` | No | false | Whether to start enabled |
-| `away_humidity` | No | - | Target humidity when in away mode |
-| `away_fixed` | No | false | If true, away humidity cannot be changed |
-| `sensor_stale_duration` | No | - | Turn off if sensor doesn't update (e.g., `00:15:00`) |
-| `unique_id` | No | - | Unique ID for the entity |
+#### Required
+| Variable | Description |
+|----------|-------------|
+| `target_sensor` | Entity ID of the humidity sensor |
 
-## Examples
+#### Humidity Settings
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `name` | "Humidity Control" | Name of the entity |
+| `target_humidity` | - | Initial target humidity |
+| `min_humidity` | 0 | Minimum settable humidity |
+| `max_humidity` | 100 | Maximum settable humidity |
+| `dry_tolerance` | 3 | How far below target before humidifying starts |
+| `wet_tolerance` | 3 | How far above target before dehumidifying starts |
 
-### Basic Setup with Both Humidifier and Dehumidifier
+#### Multi-Level Humidifier
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `humidifier_power_entity` | - | Power switch entity (e.g., `switch.robby_power`) |
+| `humidifier_level_entity` | - | Level selector entity (e.g., `select.robby_fan_level`) |
+| `humidifier_levels` | ["1","2","3"] | Available fan level options |
 
-```yaml
-humidity_control:
-  - name: "Bedroom Humidity"
-    target_sensor: sensor.bedroom_humidity
-    wet_entity: switch.bedroom_humidifier
-    dry_entity: switch.bedroom_dehumidifier
-    target_humidity: 50
-    dry_tolerance: 5
-    wet_tolerance: 5
-    initial_state: true
-```
+#### Legacy Humidifier/Dehumidifier (simple on/off)
+| Variable | Description |
+|----------|-------------|
+| `wet_entity` | Entity ID of simple humidifier switch |
+| `dry_entity` | Entity ID of simple dehumidifier switch |
 
-### Humidifier Only
+#### Air Quality
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `co2_sensor` | - | CO2 sensor entity ID |
+| `co2_target` | 600 | Target CO2 level (ppm) |
+| `co2_critical` | 900 | Critical CO2 level (ppm) |
+| `voc_sensor` | - | VOC sensor entity ID |
+| `voc_target` | 100 | Target VOC level |
+| `voc_critical` | 350 | Critical VOC level |
 
-```yaml
-humidity_control:
-  - name: "Nursery Humidity"
-    target_sensor: sensor.nursery_humidity
-    wet_entity: switch.nursery_humidifier
-    target_humidity: 55
-    min_humidity: 40
-    max_humidity: 60
-```
+#### Ventilation
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ventilation_entity` | - | Climate entity for ventilation (e.g., `climate.nilan_hvac`) |
+| `ventilation_levels` | ["0","1","2","3","4"] | Available fan mode levels |
+| `humidity_dehumidify_threshold` | 48 | Humidity % to start dehumidifying via ventilation |
+| `humidity_dehumidify_critical` | 35 | Humidity % to cap ventilation (protect from over-drying) |
 
-### Dehumidifier Only (Basement)
+#### Timing
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `min_humidify_duration` | 300 | Minimum seconds to run humidifier |
+| `min_ventilate_duration` | 180 | Minimum seconds to run ventilation |
+| `min_cycle_duration` | - | Legacy: minimum time between switching |
+| `keep_alive` | - | Interval to resend commands |
+| `sensor_stale_duration` | - | Turn off if sensor doesn't update |
 
-```yaml
-humidity_control:
-  - name: "Basement Humidity"
-    target_sensor: sensor.basement_humidity
-    dry_entity: switch.basement_dehumidifier
-    target_humidity: 50
-    max_humidity: 60
-```
-
-### With Input Boolean Entities
-
-```yaml
-input_boolean:
-  humidifier_control:
-    name: Humidifier Control
-  dehumidifier_control:
-    name: Dehumidifier Control
-
-humidity_control:
-  - name: "Smart Humidity"
-    target_sensor: sensor.room_humidity
-    wet_entity: input_boolean.humidifier_control
-    dry_entity: input_boolean.dehumidifier_control
-    target_humidity: 50
-```
-
-### With Away Mode and Safety Features
-
-```yaml
-humidity_control:
-  - name: "Home Humidity"
-    target_sensor: sensor.home_humidity
-    wet_entity: switch.whole_house_humidifier
-    dry_entity: switch.whole_house_dehumidifier
-    target_humidity: 50
-    away_humidity: 40
-    min_cycle_duration: "00:05:00"
-    keep_alive: "00:10:00"
-    sensor_stale_duration: "00:30:00"
-    initial_state: true
-```
-
-## How It Works
-
-1. The integration monitors the humidity sensor
-2. When humidity drops below `target - dry_tolerance`:
-   - Turns on the wet entity (humidifier)
-   - Turns off the dry entity (if active)
-   - Operating mode: `wet`
-3. When humidity rises above `target + wet_tolerance`:
-   - Turns on the dry entity (dehumidifier)
-   - Turns off the wet entity (if active)
-   - Operating mode: `dry`
-4. When humidity is within tolerance range:
-   - Turns off both entities
-   - Operating mode: `idle`
-
-## State Attributes
-
-The entity exposes these attributes:
-
-- `humidity`: Current target humidity
-- `current_humidity`: Current measured humidity
-- `operating_mode`: Current mode (`idle`, `wet`, or `dry`)
-- `saved_humidity`: Saved humidity when in away mode
-- `mode`: Current preset mode (`normal` or `away`)
+#### Boost Mode
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `boost_helper` | - | Input boolean to trigger boost mode |
 
 ## Services
 
-The entity supports standard humidifier services:
-
+### Standard Humidifier Services
 - `humidifier.turn_on` - Enable humidity control
-- `humidifier.turn_off` - Disable humidity control (turns off all outputs)
+- `humidifier.turn_off` - Disable humidity control
 - `humidifier.toggle` - Toggle on/off
 - `humidifier.set_humidity` - Set target humidity
 - `humidifier.set_mode` - Set mode (`normal` or `away`)
+
+### Custom Services
+
+#### `humidity_control.boost`
+Activate boost mode for rapid air exchange.
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `duration` | No | 1200 | Duration in seconds (60-3600) |
+
+```yaml
+service: humidity_control.boost
+target:
+  entity_id: humidifier.living_room_air_quality
+data:
+  duration: 1800  # 30 minutes
+```
+
+#### `humidity_control.stop_boost`
+Immediately deactivate boost mode.
+
+```yaml
+service: humidity_control.stop_boost
+target:
+  entity_id: humidifier.living_room_air_quality
+```
+
+## State Attributes
+
+| Attribute | Description |
+|-----------|-------------|
+| `humidity` | Target humidity |
+| `current_humidity` | Current measured humidity |
+| `operating_mode` | Current operating mode |
+| `air_quality_status` | Air quality status (good/elevated/poor/critical) |
+| `current_co2` | Current CO2 reading |
+| `current_voc` | Current VOC reading |
+| `humidifier_power` | Humidifier power state |
+| `humidifier_level` | Current humidifier level |
+| `ventilation_level` | Current ventilation level |
+| `ventilation_reason` | Why ventilation is active (co2/voc/humidity/boost/none) |
+| `boost_active` | Whether boost mode is active |
+| `boost_end_time` | When boost mode will end |
+
+## How It Works
+
+### Humidity Control
+1. When humidity drops below `target - dry_tolerance`:
+   - Multi-level humidifier: Activates power, sets proportional level
+   - Legacy humidifier: Turns on wet entity
+2. When humidity rises above `humidity_dehumidify_threshold`:
+   - Activates ventilation to reduce humidity
+3. Humidity level determines humidifier fan speed (proportional control)
+
+### Air Quality Control
+1. CO2/VOC sensors are monitored continuously
+2. Ventilation level scales proportionally:
+   - At target: Level 0-1
+   - Approaching critical: Level 3-4
+3. Multiple triggers combine (highest need wins)
+
+### Conflict Resolution
+- If humidity drops below `humidity_dehumidify_critical` (35%), ventilation is capped at level 2
+- Humidifier and ventilation can run simultaneously when air quality needs ventilation but humidity is low
+
+### Boost Mode
+1. Triggered via service call or input_boolean helper
+2. Sets ventilation to maximum level
+3. Automatically ends after duration expires
+4. Returns to normal proportional control
+
+## Development
+
+### Prerequisites
+
+This project uses [Nix](https://nixos.org/) for reproducible development environments.
+
+### Setup
+
+```bash
+# Enter development shell
+nix develop
+
+# Or if you don't have flakes enabled
+nix-shell -p python312 python312Packages.pyyaml python312Packages.pytest ruff
+```
+
+### Available Tools
+
+Inside the development shell:
+
+```bash
+# Linting
+ruff check custom_components/
+
+# Auto-fix linting issues
+ruff check custom_components/ --fix
+
+# Format code
+ruff format custom_components/
+
+# Check formatting without changes
+ruff format --check custom_components/
+
+# Type checking (expects errors without HA installed)
+mypy custom_components/
+
+# Validate YAML
+python3 -c "import yaml; yaml.safe_load(open('custom_components/humidity_control/services.yaml'))"
+
+# Validate JSON
+python3 -c "import json; json.load(open('custom_components/humidity_control/strings.json'))"
+```
+
+### Project Structure
+
+```
+custom_components/humidity_control/
+├── __init__.py          # Component setup, YAML schema
+├── config_flow.py       # UI configuration flow
+├── const.py             # Constants and defaults
+├── humidifier.py        # Main entity logic
+├── manifest.json        # Integration manifest
+├── services.yaml        # Service definitions
+├── strings.json         # Translatable strings
+└── translations/
+    ├── en.json          # English translations
+    └── de.json          # German translations
+```
+
+### Code Style
+
+- Python 3.12+
+- Formatted with `ruff format`
+- Linted with `ruff check`
+- Line length: 100 characters
 
 ## Troubleshooting
 
 ### Entity shows as unavailable
 - Check that your humidity sensor is reporting values
-- Verify the sensor entity ID is correct
+- Verify all sensor entity IDs are correct
 
-### Devices not turning on/off
-- Verify the switch/input_boolean entity IDs are correct
+### Humidifier not turning on
+- Verify power and level entity IDs are correct
 - Check that the entities can be controlled manually
 - Review Home Assistant logs for errors
 
-### Rapid cycling
-- Increase `dry_tolerance` and `wet_tolerance` values
-- Add `min_cycle_duration` to prevent rapid switching
+### Ventilation not activating for air quality
+- Ensure CO2/VOC sensors are configured
+- Check sensor readings are within expected ranges
+- Verify ventilation entity supports `climate.set_fan_mode`
+
+### Boost mode not working
+- If using helper: ensure input_boolean entity exists
+- Check service call syntax
+- Review entity attributes for `boost_active` status
+
+## License
+
+This integration is licensed under the **Apache License 2.0**.
+
+This is a derivative work based on the [Generic Hygrostat](https://github.com/home-assistant/core/tree/dev/homeassistant/components/generic_hygrostat) component from Home Assistant Core.
+
+**Original work:**
+- Home Assistant Core - Generic Hygrostat Integration
+- Copyright Home Assistant Contributors
+- Licensed under the Apache License, Version 2.0
+- https://github.com/home-assistant/core
+
+See the [NOTICE](custom_components/humidity_control/NOTICE) file for details on changes made.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues and pull requests.
+Contributions are welcome! Please:
+
+1. Run `ruff check` and `ruff format` before submitting
+2. Ensure all JSON/YAML files are valid
+3. Update translations if adding new strings
+4. Test in a Home Assistant environment
 
 ## Acknowledgments
 

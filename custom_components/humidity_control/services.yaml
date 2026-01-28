@@ -1,0 +1,31 @@
+# Services for Humidity Control integration
+
+boost:
+  name: Activate Boost Mode
+  description: Activate boost mode for rapid air exchange. Sets ventilation to maximum for the specified duration.
+  target:
+    entity:
+      integration: humidity_control
+      domain: humidifier
+  fields:
+    duration:
+      name: Duration
+      description: "Duration in seconds for boost mode (default: 1200 = 20 minutes)"
+      required: false
+      default: 1200
+      example: 1800
+      selector:
+        number:
+          min: 60
+          max: 3600
+          step: 60
+          unit_of_measurement: seconds
+          mode: box
+
+stop_boost:
+  name: Stop Boost Mode
+  description: Immediately deactivate boost mode and return to normal operation.
+  target:
+    entity:
+      integration: humidity_control
+      domain: humidifier

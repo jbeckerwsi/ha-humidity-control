@@ -17,30 +17,56 @@ from __future__ import annotations
 import logging
 
 import voluptuous as vol
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME, CONF_UNIQUE_ID, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import discovery
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     CONF_AWAY_FIXED,
     CONF_AWAY_HUMIDITY,
+    CONF_BOOST_HELPER,
+    CONF_CO2_CRITICAL,
+    CONF_CO2_SENSOR,
+    CONF_CO2_TARGET,
     CONF_DRY_ENTITY,
     CONF_DRY_TOLERANCE,
+    CONF_HUMIDIFIER_LEVEL_ENTITY,
+    CONF_HUMIDIFIER_LEVELS,
+    CONF_HUMIDIFIER_POWER_ENTITY,
+    CONF_HUMIDITY_DEHUMIDIFY_CRITICAL,
+    CONF_HUMIDITY_DEHUMIDIFY_THRESHOLD,
     CONF_INITIAL_STATE,
     CONF_KEEP_ALIVE,
     CONF_MAX_HUMIDITY,
     CONF_MIN_DUR,
+    CONF_MIN_HUMIDIFY_DURATION,
     CONF_MIN_HUMIDITY,
+    CONF_MIN_VENTILATE_DURATION,
     CONF_SENSOR,
     CONF_STALE_DURATION,
     CONF_TARGET_HUMIDITY,
+    CONF_VENTILATION_ENTITY,
+    CONF_VENTILATION_LEVELS,
+    CONF_VOC_CRITICAL,
+    CONF_VOC_SENSOR,
+    CONF_VOC_TARGET,
     CONF_WET_ENTITY,
     CONF_WET_TOLERANCE,
+    DEFAULT_CO2_CRITICAL,
+    DEFAULT_CO2_TARGET,
+    DEFAULT_HUMIDIFIER_LEVELS,
+    DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL,
+    DEFAULT_HUMIDITY_DEHUMIDIFY_THRESHOLD,
+    DEFAULT_MIN_HUMIDIFY_DURATION,
+    DEFAULT_MIN_VENTILATE_DURATION,
     DEFAULT_NAME,
     DEFAULT_TOLERANCE,
+    DEFAULT_VENTILATION_LEVELS,
+    DEFAULT_VOC_CRITICAL,
+    DEFAULT_VOC_TARGET,
     DOMAIN,
 )
 
@@ -50,9 +76,38 @@ PLATFORMS = [Platform.HUMIDIFIER]
 
 HUMIDITY_CONTROL_SCHEMA = vol.Schema(
     {
+        # Required - Humidity sensor
         vol.Required(CONF_SENSOR): cv.entity_id,
+        # Legacy output entities (on/off humidifier/dehumidifier)
         vol.Optional(CONF_WET_ENTITY): cv.entity_id,
         vol.Optional(CONF_DRY_ENTITY): cv.entity_id,
+        # Multi-level humidifier (Robby)
+        vol.Optional(CONF_HUMIDIFIER_POWER_ENTITY): cv.entity_id,
+        vol.Optional(CONF_HUMIDIFIER_LEVEL_ENTITY): cv.entity_id,
+        vol.Optional(CONF_HUMIDIFIER_LEVELS, default=DEFAULT_HUMIDIFIER_LEVELS): vol.All(
+            cv.ensure_list, [cv.string]
+        ),
+        # Air quality sensors
+        vol.Optional(CONF_CO2_SENSOR): cv.entity_id,
+        vol.Optional(CONF_CO2_TARGET, default=DEFAULT_CO2_TARGET): vol.Coerce(int),
+        vol.Optional(CONF_CO2_CRITICAL, default=DEFAULT_CO2_CRITICAL): vol.Coerce(int),
+        vol.Optional(CONF_VOC_SENSOR): cv.entity_id,
+        vol.Optional(CONF_VOC_TARGET, default=DEFAULT_VOC_TARGET): vol.Coerce(int),
+        vol.Optional(CONF_VOC_CRITICAL, default=DEFAULT_VOC_CRITICAL): vol.Coerce(int),
+        # Ventilation control (Nilan)
+        vol.Optional(CONF_VENTILATION_ENTITY): cv.entity_id,
+        vol.Optional(CONF_VENTILATION_LEVELS, default=DEFAULT_VENTILATION_LEVELS): vol.All(
+            cv.ensure_list, [cv.string]
+        ),
+        vol.Optional(
+            CONF_HUMIDITY_DEHUMIDIFY_THRESHOLD,
+            default=DEFAULT_HUMIDITY_DEHUMIDIFY_THRESHOLD,
+        ): vol.Coerce(float),
+        vol.Optional(
+            CONF_HUMIDITY_DEHUMIDIFY_CRITICAL,
+            default=DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL,
+        ): vol.Coerce(float),
+        # Humidity settings
         vol.Optional(CONF_MAX_HUMIDITY): vol.Coerce(float),
         vol.Optional(CONF_MIN_HUMIDITY): vol.Coerce(float),
         vol.Optional(CONF_TARGET_HUMIDITY): vol.Coerce(float),
@@ -64,9 +119,16 @@ HUMIDITY_CONTROL_SCHEMA = vol.Schema(
         vol.Optional(CONF_AWAY_HUMIDITY): vol.Coerce(int),
         vol.Optional(CONF_AWAY_FIXED): cv.boolean,
         vol.Optional(CONF_MIN_DUR): vol.All(cv.time_period, cv.positive_timedelta),
-        vol.Optional(CONF_STALE_DURATION): vol.All(
-            cv.time_period, cv.positive_timedelta
+        vol.Optional(CONF_STALE_DURATION): vol.All(cv.time_period, cv.positive_timedelta),
+        # Timing for new features
+        vol.Optional(CONF_MIN_HUMIDIFY_DURATION, default=DEFAULT_MIN_HUMIDIFY_DURATION): vol.Coerce(
+            int
         ),
+        vol.Optional(
+            CONF_MIN_VENTILATE_DURATION, default=DEFAULT_MIN_VENTILATE_DURATION
+        ): vol.Coerce(int),
+        # Boost mode
+        vol.Optional(CONF_BOOST_HELPER): cv.entity_id,
         vol.Optional(CONF_UNIQUE_ID): cv.string,
     }
 )

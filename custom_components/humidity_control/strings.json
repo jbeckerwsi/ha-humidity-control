@@ -3,26 +3,76 @@
     "step": {
       "user": {
         "title": "Humidity Control",
-        "description": "Set up a combined humidity control (humidifier/dehumidifier)",
+        "description": "Set up a unified air quality and humidity controller",
         "data": {
           "name": "Name",
           "target_sensor": "Humidity sensor",
-          "wet_entity": "Humidifier entity (switch/input_boolean)",
-          "dry_entity": "Dehumidifier entity (switch/input_boolean)"
+          "wet_entity": "Humidifier entity (legacy)",
+          "dry_entity": "Dehumidifier entity (legacy)"
         },
         "data_description": {
           "name": "Name for this humidity control entity",
           "target_sensor": "The humidity sensor to monitor",
-          "wet_entity": "Entity to turn on when humidity is too low (optional)",
-          "dry_entity": "Entity to turn on when humidity is too high (optional)"
+          "wet_entity": "Legacy on/off humidifier entity (optional, use multi-level humidifier instead)",
+          "dry_entity": "Legacy on/off dehumidifier entity (optional)"
+        }
+      },
+      "humidifier": {
+        "title": "Multi-Level Humidifier",
+        "description": "Configure a multi-level humidifier with power and fan level control",
+        "data": {
+          "humidifier_power_entity": "Humidifier power switch",
+          "humidifier_level_entity": "Humidifier level selector",
+          "humidifier_levels": "Humidifier levels"
+        },
+        "data_description": {
+          "humidifier_power_entity": "Switch entity to turn humidifier on/off (e.g., switch.robby_power)",
+          "humidifier_level_entity": "Select entity for fan level (e.g., select.robby_fan_level)",
+          "humidifier_levels": "Available humidifier levels from lowest to highest output"
+        }
+      },
+      "air_quality": {
+        "title": "Air Quality Sensors",
+        "description": "Configure CO2 and VOC sensors for air quality monitoring",
+        "data": {
+          "co2_sensor": "CO2 sensor",
+          "co2_target": "CO2 target (ppm)",
+          "co2_critical": "CO2 critical threshold (ppm)",
+          "voc_sensor": "VOC sensor",
+          "voc_target": "VOC target",
+          "voc_critical": "VOC critical threshold"
+        },
+        "data_description": {
+          "co2_sensor": "CO2 sensor entity (e.g., sensor.mh_z19_co2_value)",
+          "co2_target": "CO2 level above which ventilation starts (default: 600 ppm)",
+          "co2_critical": "CO2 level requiring maximum ventilation (default: 900 ppm)",
+          "voc_sensor": "VOC sensor entity (e.g., sensor.voc)",
+          "voc_target": "VOC level above which ventilation starts (default: 100)",
+          "voc_critical": "VOC level requiring maximum ventilation (default: 350)"
+        }
+      },
+      "ventilation": {
+        "title": "Ventilation Control",
+        "description": "Configure ventilation system for air exchange and dehumidification",
+        "data": {
+          "ventilation_entity": "Ventilation entity",
+          "ventilation_levels": "Ventilation fan levels",
+          "humidity_dehumidify_threshold": "Dehumidify humidity threshold (%)",
+          "humidity_dehumidify_critical": "Critical humidity threshold (%)"
+        },
+        "data_description": {
+          "ventilation_entity": "Climate or fan entity for ventilation (e.g., climate.nilan_hvac)",
+          "ventilation_levels": "Available fan levels from off (0) to maximum",
+          "humidity_dehumidify_threshold": "Humidity level above which dehumidification starts (default: 48%)",
+          "humidity_dehumidify_critical": "Humidity level requiring maximum ventilation (default: 55%)"
         }
       },
       "options": {
-        "title": "Options",
-        "description": "Configure additional settings for humidity control",
+        "title": "Humidity Options",
+        "description": "Configure humidity control settings and tolerances",
         "data": {
-          "wet_entity": "Humidifier entity",
-          "dry_entity": "Dehumidifier entity",
+          "wet_entity": "Humidifier entity (legacy)",
+          "dry_entity": "Dehumidifier entity (legacy)",
           "dry_tolerance": "Dry tolerance",
           "wet_tolerance": "Wet tolerance",
           "min_humidity": "Minimum humidity",
@@ -36,6 +86,8 @@
           "away_fixed": "Fixed away humidity"
         },
         "data_description": {
+          "wet_entity": "Legacy on/off humidifier entity",
+          "dry_entity": "Legacy on/off dehumidifier entity",
           "dry_tolerance": "How far below target before humidifying starts",
           "wet_tolerance": "How far above target before dehumidifying starts",
           "min_humidity": "Minimum settable humidity",
@@ -47,6 +99,20 @@
           "initial_state": "Whether to start enabled when Home Assistant starts",
           "away_humidity": "Target humidity when in away mode",
           "away_fixed": "If enabled, away humidity cannot be changed"
+        }
+      },
+      "timing": {
+        "title": "Timing & Boost",
+        "description": "Configure minimum action durations and boost mode helper",
+        "data": {
+          "min_humidify_duration": "Minimum humidify duration (seconds)",
+          "min_ventilate_duration": "Minimum ventilate duration (seconds)",
+          "boost_helper": "Boost mode helper"
+        },
+        "data_description": {
+          "min_humidify_duration": "Minimum time humidifier runs before changing (prevents cycling)",
+          "min_ventilate_duration": "Minimum time ventilation runs before changing (prevents cycling)",
+          "boost_helper": "Optional input_boolean to trigger boost mode via UI or automation"
         }
       }
     },
@@ -57,11 +123,20 @@
   "options": {
     "step": {
       "init": {
-        "title": "Options",
-        "description": "Configure humidity control settings",
+        "menu_options": {
+          "humidity": "Humidity settings",
+          "humidifier": "Multi-level humidifier",
+          "air_quality": "Air quality sensors",
+          "ventilation": "Ventilation control",
+          "timing": "Timing & boost"
+        }
+      },
+      "humidity": {
+        "title": "Humidity Settings",
+        "description": "Configure humidity control settings and tolerances",
         "data": {
-          "wet_entity": "Humidifier entity",
-          "dry_entity": "Dehumidifier entity",
+          "wet_entity": "Humidifier entity (legacy)",
+          "dry_entity": "Dehumidifier entity (legacy)",
           "dry_tolerance": "Dry tolerance",
           "wet_tolerance": "Wet tolerance",
           "min_humidity": "Minimum humidity",
@@ -75,6 +150,8 @@
           "away_fixed": "Fixed away humidity"
         },
         "data_description": {
+          "wet_entity": "Legacy on/off humidifier entity",
+          "dry_entity": "Legacy on/off dehumidifier entity",
           "dry_tolerance": "How far below target before humidifying starts",
           "wet_tolerance": "How far above target before dehumidifying starts",
           "min_humidity": "Minimum settable humidity",
@@ -86,6 +163,70 @@
           "initial_state": "Whether to start enabled when Home Assistant starts",
           "away_humidity": "Target humidity when in away mode",
           "away_fixed": "If enabled, away humidity cannot be changed"
+        }
+      },
+      "humidifier": {
+        "title": "Multi-Level Humidifier",
+        "description": "Configure a multi-level humidifier with power and fan level control",
+        "data": {
+          "humidifier_power_entity": "Humidifier power switch",
+          "humidifier_level_entity": "Humidifier level selector",
+          "humidifier_levels": "Humidifier levels"
+        },
+        "data_description": {
+          "humidifier_power_entity": "Switch entity to turn humidifier on/off",
+          "humidifier_level_entity": "Select entity for fan level control",
+          "humidifier_levels": "Available humidifier levels from lowest to highest output"
+        }
+      },
+      "air_quality": {
+        "title": "Air Quality Sensors",
+        "description": "Configure CO2 and VOC sensors for air quality monitoring",
+        "data": {
+          "co2_sensor": "CO2 sensor",
+          "co2_target": "CO2 target (ppm)",
+          "co2_critical": "CO2 critical threshold (ppm)",
+          "voc_sensor": "VOC sensor",
+          "voc_target": "VOC target",
+          "voc_critical": "VOC critical threshold"
+        },
+        "data_description": {
+          "co2_sensor": "CO2 sensor entity",
+          "co2_target": "CO2 level above which ventilation starts",
+          "co2_critical": "CO2 level requiring maximum ventilation",
+          "voc_sensor": "VOC sensor entity",
+          "voc_target": "VOC level above which ventilation starts",
+          "voc_critical": "VOC level requiring maximum ventilation"
+        }
+      },
+      "ventilation": {
+        "title": "Ventilation Control",
+        "description": "Configure ventilation system for air exchange and dehumidification",
+        "data": {
+          "ventilation_entity": "Ventilation entity",
+          "ventilation_levels": "Ventilation fan levels",
+          "humidity_dehumidify_threshold": "Dehumidify humidity threshold (%)",
+          "humidity_dehumidify_critical": "Critical humidity threshold (%)"
+        },
+        "data_description": {
+          "ventilation_entity": "Climate or fan entity for ventilation",
+          "ventilation_levels": "Available fan levels from off (0) to maximum",
+          "humidity_dehumidify_threshold": "Humidity level above which dehumidification starts",
+          "humidity_dehumidify_critical": "Humidity level requiring maximum ventilation"
+        }
+      },
+      "timing": {
+        "title": "Timing & Boost",
+        "description": "Configure minimum action durations and boost mode helper",
+        "data": {
+          "min_humidify_duration": "Minimum humidify duration (seconds)",
+          "min_ventilate_duration": "Minimum ventilate duration (seconds)",
+          "boost_helper": "Boost mode helper"
+        },
+        "data_description": {
+          "min_humidify_duration": "Minimum time humidifier runs before changing",
+          "min_ventilate_duration": "Minimum time ventilation runs before changing",
+          "boost_helper": "Optional input_boolean to trigger boost mode"
         }
       }
     }
@@ -98,8 +239,30 @@
             "name": "Operating mode",
             "state": {
               "idle": "Idle",
-              "wet": "Humidifying",
-              "dry": "Dehumidifying"
+              "humidifying": "Humidifying",
+              "dehumidifying": "Dehumidifying",
+              "ventilating": "Ventilating",
+              "ventilating_and_humidifying": "Ventilating & Humidifying",
+              "boost": "Boost"
+            }
+          },
+          "air_quality_status": {
+            "name": "Air quality",
+            "state": {
+              "good": "Good",
+              "elevated": "Elevated",
+              "poor": "Poor",
+              "critical": "Critical"
+            }
+          },
+          "ventilation_reason": {
+            "name": "Ventilation reason",
+            "state": {
+              "none": "None",
+              "co2": "CO2",
+              "voc": "VOC",
+              "humidity": "High humidity",
+              "boost": "Boost mode"
             }
           }
         }
@@ -112,6 +275,22 @@
         "normal": "Normal",
         "away": "Away"
       }
+    }
+  },
+  "services": {
+    "boost": {
+      "name": "Activate Boost Mode",
+      "description": "Activate boost mode for rapid air exchange. Sets ventilation to maximum for the specified duration.",
+      "fields": {
+        "duration": {
+          "name": "Duration",
+          "description": "Duration in seconds for boost mode (default: 1200 = 20 minutes)"
+        }
+      }
+    },
+    "stop_boost": {
+      "name": "Stop Boost Mode",
+      "description": "Immediately deactivate boost mode and return to normal operation."
     }
   }
 }
