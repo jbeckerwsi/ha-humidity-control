@@ -47,9 +47,15 @@ from .const import (
     CONF_MIN_HUMIDIFY_DURATION,
     CONF_MIN_HUMIDITY,
     CONF_MIN_VENTILATE_DURATION,
+    CONF_MIN_VENTILATION_LEVEL,
     CONF_SENSOR,
     CONF_STALE_DURATION,
     CONF_TARGET_HUMIDITY,
+    CONF_TEMPERATURE_CRITICAL,
+    CONF_TEMPERATURE_MAX_LEVEL,
+    CONF_TEMPERATURE_MIN_LEVEL,
+    CONF_TEMPERATURE_SENSOR,
+    CONF_TEMPERATURE_TARGET,
     CONF_VENTILATION_ENTITY,
     CONF_VENTILATION_LEVELS,
     CONF_VOC_CRITICAL,
@@ -62,7 +68,11 @@ from .const import (
     DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL,
     DEFAULT_MIN_HUMIDIFY_DURATION,
     DEFAULT_MIN_VENTILATE_DURATION,
+    DEFAULT_MIN_VENTILATION_LEVEL,
     DEFAULT_NAME,
+    DEFAULT_TEMPERATURE_CRITICAL,
+    DEFAULT_TEMPERATURE_MIN_LEVEL,
+    DEFAULT_TEMPERATURE_TARGET,
     DEFAULT_TOLERANCE,
     DEFAULT_VENTILATION_LEVELS,
     DEFAULT_VOC_CRITICAL,
@@ -191,6 +201,68 @@ VENTILATION_SCHEMA = vol.Schema(
                 mode=selector.NumberSelectorMode.BOX,
             )
         ),
+        vol.Optional(
+            CONF_MIN_VENTILATION_LEVEL, default=DEFAULT_MIN_VENTILATION_LEVEL
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=10,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        ),
+    }
+)
+
+# Schema for temperature-driven ventilation (e.g., summer cooling from solar gain)
+TEMPERATURE_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_TEMPERATURE_SENSOR): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=SENSOR_DOMAIN,
+                device_class=SensorDeviceClass.TEMPERATURE,
+            )
+        ),
+        vol.Optional(
+            CONF_TEMPERATURE_TARGET, default=DEFAULT_TEMPERATURE_TARGET
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=10,
+                max=35,
+                step=0.5,
+                unit_of_measurement="°C",
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Optional(
+            CONF_TEMPERATURE_CRITICAL, default=DEFAULT_TEMPERATURE_CRITICAL
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=15,
+                max=40,
+                step=0.5,
+                unit_of_measurement="°C",
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Optional(
+            CONF_TEMPERATURE_MIN_LEVEL, default=DEFAULT_TEMPERATURE_MIN_LEVEL
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=10,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Optional(CONF_TEMPERATURE_MAX_LEVEL): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=10,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        ),
     }
 )
 
@@ -302,17 +374,21 @@ CONFIG_FLOW = {
     "user": SchemaFlowFormStep(CONFIG_SCHEMA, next_step="humidifier"),
     "humidifier": SchemaFlowFormStep(HUMIDIFIER_SCHEMA, next_step="air_quality"),
     "air_quality": SchemaFlowFormStep(AIR_QUALITY_SCHEMA, next_step="ventilation"),
-    "ventilation": SchemaFlowFormStep(VENTILATION_SCHEMA, next_step="options"),
+    "ventilation": SchemaFlowFormStep(VENTILATION_SCHEMA, next_step="temperature"),
+    "temperature": SchemaFlowFormStep(TEMPERATURE_SCHEMA, next_step="options"),
     "options": SchemaFlowFormStep(OPTIONS_SCHEMA, next_step="timing"),
     "timing": SchemaFlowFormStep(TIMING_SCHEMA),
 }
 
 OPTIONS_FLOW = {
-    "init": SchemaFlowMenuStep(["humidity", "humidifier", "air_quality", "ventilation", "timing"]),
+    "init": SchemaFlowMenuStep(
+        ["humidity", "humidifier", "air_quality", "ventilation", "temperature", "timing"]
+    ),
     "humidity": SchemaFlowFormStep(OPTIONS_SCHEMA),
     "humidifier": SchemaFlowFormStep(HUMIDIFIER_SCHEMA),
     "air_quality": SchemaFlowFormStep(AIR_QUALITY_SCHEMA),
     "ventilation": SchemaFlowFormStep(VENTILATION_SCHEMA),
+    "temperature": SchemaFlowFormStep(TEMPERATURE_SCHEMA),
     "timing": SchemaFlowFormStep(TIMING_SCHEMA),
 }
 

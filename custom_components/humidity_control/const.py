@@ -38,6 +38,14 @@ CONF_VOC_CRITICAL = "voc_critical"
 CONF_VENTILATION_ENTITY = "ventilation_entity"
 CONF_VENTILATION_LEVELS = "ventilation_levels"
 CONF_HUMIDITY_DEHUMIDIFY_CRITICAL = "humidity_dehumidify_critical"
+CONF_MIN_VENTILATION_LEVEL = "min_ventilation_level"
+
+# Configuration keys - Temperature-driven ventilation
+CONF_TEMPERATURE_SENSOR = "temperature_sensor"
+CONF_TEMPERATURE_TARGET = "temperature_target"
+CONF_TEMPERATURE_CRITICAL = "temperature_critical"
+CONF_TEMPERATURE_MIN_LEVEL = "temperature_min_level"
+CONF_TEMPERATURE_MAX_LEVEL = "temperature_max_level"
 
 # Configuration keys - Timing
 CONF_MIN_HUMIDIFY_DURATION = "min_humidify_duration"
@@ -56,6 +64,10 @@ DEFAULT_VOC_CRITICAL = 350
 DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL = 55
 DEFAULT_HUMIDIFIER_LEVELS = ["Auto", "Low", "Medium", "High"]
 DEFAULT_VENTILATION_LEVELS = ["0", "1", "2", "3", "4"]
+DEFAULT_MIN_VENTILATION_LEVEL = 0
+DEFAULT_TEMPERATURE_TARGET = 23.0
+DEFAULT_TEMPERATURE_CRITICAL = 27.0
+DEFAULT_TEMPERATURE_MIN_LEVEL = 1
 DEFAULT_MIN_HUMIDIFY_DURATION = 300  # 5 minutes in seconds
 DEFAULT_MIN_VENTILATE_DURATION = 180  # 3 minutes in seconds
 DEFAULT_BOOST_DURATION = 1200  # 20 minutes in seconds
@@ -86,6 +98,8 @@ VENT_REASON_NONE = "none"
 VENT_REASON_CO2 = "co2"
 VENT_REASON_VOC = "voc"
 VENT_REASON_HUMIDITY = "humidity"
+VENT_REASON_TEMPERATURE = "temperature"
+VENT_REASON_MIN_FLOOR = "min_floor"
 VENT_REASON_BOOST = "boost"
 
 # Attributes
@@ -93,6 +107,7 @@ ATTR_SAVED_HUMIDITY = "saved_humidity"
 ATTR_OPERATING_MODE = "operating_mode"
 ATTR_CURRENT_CO2 = "current_co2"
 ATTR_CURRENT_VOC = "current_voc"
+ATTR_CURRENT_TEMPERATURE = "current_temperature"
 ATTR_AIR_QUALITY_STATUS = "air_quality_status"
 ATTR_VENTILATION_LEVEL = "ventilation_level"
 ATTR_VENTILATION_REASON = "ventilation_reason"
@@ -104,6 +119,7 @@ ATTR_BOOST_LEVEL = "boost_level"
 ATTR_HUMIDITY_ACTION = "humidity_action"
 ATTR_CO2_ACTION = "co2_action"
 ATTR_VOC_ACTION = "voc_action"
+ATTR_TEMPERATURE_ACTION = "temperature_action"
 
 # Services
 SERVICE_BOOST = "boost"

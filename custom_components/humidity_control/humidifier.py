@@ -91,12 +91,14 @@ from .const import (
     ATTR_BOOST_LEVEL,
     ATTR_CO2_ACTION,
     ATTR_CURRENT_CO2,
+    ATTR_CURRENT_TEMPERATURE,
     ATTR_CURRENT_VOC,
     ATTR_HUMIDIFIER_LEVEL,
     ATTR_HUMIDIFIER_POWER,
     ATTR_HUMIDITY_ACTION,
     ATTR_OPERATING_MODE,
     ATTR_SAVED_HUMIDITY,
+    ATTR_TEMPERATURE_ACTION,
     ATTR_VENTILATION_LEVEL,
     ATTR_VENTILATION_REASON,
     ATTR_VOC_ACTION,
@@ -118,9 +120,15 @@ from .const import (
     CONF_MIN_HUMIDIFY_DURATION,
     CONF_MIN_HUMIDITY,
     CONF_MIN_VENTILATE_DURATION,
+    CONF_MIN_VENTILATION_LEVEL,
     CONF_SENSOR,
     CONF_STALE_DURATION,
     CONF_TARGET_HUMIDITY,
+    CONF_TEMPERATURE_CRITICAL,
+    CONF_TEMPERATURE_MAX_LEVEL,
+    CONF_TEMPERATURE_MIN_LEVEL,
+    CONF_TEMPERATURE_SENSOR,
+    CONF_TEMPERATURE_TARGET,
     CONF_VENTILATION_ENTITY,
     CONF_VENTILATION_LEVELS,
     CONF_VOC_CRITICAL,
@@ -134,6 +142,10 @@ from .const import (
     DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL,
     DEFAULT_MIN_HUMIDIFY_DURATION,
     DEFAULT_MIN_VENTILATE_DURATION,
+    DEFAULT_MIN_VENTILATION_LEVEL,
+    DEFAULT_TEMPERATURE_CRITICAL,
+    DEFAULT_TEMPERATURE_MIN_LEVEL,
+    DEFAULT_TEMPERATURE_TARGET,
     DEFAULT_VENTILATION_LEVELS,
     DEFAULT_VOC_CRITICAL,
     DEFAULT_VOC_TARGET,
@@ -153,7 +165,9 @@ from .const import (
     VENT_REASON_BOOST,
     VENT_REASON_CO2,
     VENT_REASON_HUMIDITY,
+    VENT_REASON_MIN_FLOOR,
     VENT_REASON_NONE,
+    VENT_REASON_TEMPERATURE,
     VENT_REASON_VOC,
 )
 
@@ -257,6 +271,20 @@ async def _async_setup_config(
     humidity_dehumidify_critical: float = config.get(
         CONF_HUMIDITY_DEHUMIDIFY_CRITICAL, DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL
     )
+    min_ventilation_level: int = config.get(
+        CONF_MIN_VENTILATION_LEVEL, DEFAULT_MIN_VENTILATION_LEVEL
+    )
+
+    # Temperature-driven ventilation
+    temperature_sensor: str | None = config.get(CONF_TEMPERATURE_SENSOR)
+    temperature_target: float = config.get(CONF_TEMPERATURE_TARGET, DEFAULT_TEMPERATURE_TARGET)
+    temperature_critical: float = config.get(
+        CONF_TEMPERATURE_CRITICAL, DEFAULT_TEMPERATURE_CRITICAL
+    )
+    temperature_min_level: int = config.get(
+        CONF_TEMPERATURE_MIN_LEVEL, DEFAULT_TEMPERATURE_MIN_LEVEL
+    )
+    temperature_max_level: int | None = config.get(CONF_TEMPERATURE_MAX_LEVEL)
 
     # Timing
     min_humidify_duration: int = config.get(
@@ -300,6 +328,12 @@ async def _async_setup_config(
                 ventilation_entity=ventilation_entity,
                 ventilation_levels=ventilation_levels,
                 humidity_dehumidify_critical=humidity_dehumidify_critical,
+                min_ventilation_level=min_ventilation_level,
+                temperature_sensor=temperature_sensor,
+                temperature_target=temperature_target,
+                temperature_critical=temperature_critical,
+                temperature_min_level=temperature_min_level,
+                temperature_max_level=temperature_max_level,
                 min_humidify_duration=min_humidify_duration,
                 min_ventilate_duration=min_ventilate_duration,
                 boost_helper=boost_helper,
@@ -344,6 +378,12 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         ventilation_entity: str | None,
         ventilation_levels: list[str],
         humidity_dehumidify_critical: float,
+        min_ventilation_level: int,
+        temperature_sensor: str | None,
+        temperature_target: float,
+        temperature_critical: float,
+        temperature_min_level: int,
+        temperature_max_level: int | None,
         min_humidify_duration: int,
         min_ventilate_duration: int,
         boost_helper: str | None,
@@ -399,8 +439,24 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         self._ventilation_entity = ventilation_entity
         self._ventilation_levels = ventilation_levels
         self._humidity_dehumidify_critical = humidity_dehumidify_critical
+        self._min_ventilation_level = max(
+            0, min(min_ventilation_level, len(ventilation_levels) - 1)
+        )
         self._current_ventilation_level: int = 0
         self._ventilation_reason: str = VENT_REASON_NONE
+
+        # New: Temperature-driven ventilation
+        self._temperature_sensor = temperature_sensor
+        self._temperature_target = temperature_target
+        self._temperature_critical = temperature_critical
+        max_vent_levels = len(ventilation_levels) - 1
+        self._temperature_min_level = max(0, min(temperature_min_level, max_vent_levels))
+        self._temperature_max_level = (
+            max_vent_levels
+            if temperature_max_level is None
+            else max(self._temperature_min_level, min(temperature_max_level, max_vent_levels))
+        )
+        self._cur_temperature: float | None = None
 
         # New: Timing
         self._min_humidify_duration = timedelta(seconds=min_humidify_duration)
@@ -451,6 +507,16 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
                 )
             )
 
+        # Track temperature sensor
+        if self._temperature_sensor:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass,
+                    self._temperature_sensor,
+                    self._async_temperature_sensor_event,
+                )
+            )
+
         # Track boost helper input_boolean
         if self._boost_helper:
             self.async_on_remove(
@@ -495,6 +561,14 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
                     STATE_UNAVAILABLE,
                 ):
                     await self._async_update_voc(voc_state.state)
+
+            if self._temperature_sensor:
+                temp_state = self.hass.states.get(self._temperature_sensor)
+                if temp_state and temp_state.state not in (
+                    STATE_UNKNOWN,
+                    STATE_UNAVAILABLE,
+                ):
+                    await self._async_update_temperature(temp_state.state)
 
         self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
 
@@ -548,6 +622,8 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
             attrs[ATTR_CURRENT_CO2] = self._cur_co2
         if self._cur_voc is not None:
             attrs[ATTR_CURRENT_VOC] = self._cur_voc
+        if self._cur_temperature is not None:
+            attrs[ATTR_CURRENT_TEMPERATURE] = self._cur_temperature
 
         # Ventilation state
         if self._ventilation_entity:
@@ -569,6 +645,7 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         attrs[ATTR_HUMIDITY_ACTION] = self._get_humidity_action()
         attrs[ATTR_CO2_ACTION] = self._get_co2_action()
         attrs[ATTR_VOC_ACTION] = self._get_voc_action()
+        attrs[ATTR_TEMPERATURE_ACTION] = self._get_temperature_action()
 
         return attrs
 
@@ -600,6 +677,18 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         if self._cur_voc >= self._voc_critical:
             return "critical"
         if self._cur_voc >= self._voc_target:
+            return "ventilating"
+        return "good"
+
+    def _get_temperature_action(self) -> str:
+        """Get the current temperature-driven ventilation action level."""
+        if self._temperature_sensor is None:
+            return "disabled"
+        if self._cur_temperature is None:
+            return "unknown"
+        if self._cur_temperature >= self._temperature_critical:
+            return "critical"
+        if self._cur_temperature >= self._temperature_target:
             return "ventilating"
         return "good"
 
@@ -736,6 +825,15 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         await self._async_operate()
         self.async_write_ha_state()
 
+    async def _async_temperature_sensor_event(self, event: Event[EventStateChangedData]) -> None:
+        """Handle temperature sensor changes."""
+        new_state = event.data["new_state"]
+        if new_state is None or new_state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+            return
+        await self._async_update_temperature(new_state.state)
+        await self._async_operate()
+        self.async_write_ha_state()
+
     async def _async_boost_helper_event(self, event: Event[EventStateChangedData]) -> None:
         """Handle boost helper input_boolean changes."""
         new_state = event.data["new_state"]
@@ -823,6 +921,14 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
             _LOGGER.debug("Unable to update VOC from sensor: %s", ex)
             self._cur_voc = None
 
+    async def _async_update_temperature(self, temperature: str) -> None:
+        """Update indoor temperature reading."""
+        try:
+            self._cur_temperature = float(temperature)
+        except ValueError as ex:
+            _LOGGER.debug("Unable to update temperature from sensor: %s", ex)
+            self._cur_temperature = None
+
     # =========================================================================
     # Main Control Logic
     # =========================================================================
@@ -872,6 +978,13 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
             else:
                 new_mode = OP_MODE_IDLE
 
+            # Dehumidify path skipped the air-quality/temperature/min-floor calculation,
+            # so make sure those still raise the floor here.
+            aq_level, aq_reason = self._calculate_ventilation_need()
+            if aq_level > vent_level:
+                vent_level = aq_level
+                vent_reason = aq_reason
+
             # Apply conflict resolution
             vent_level, humidifier_level = self._resolve_conflicts(vent_level, humidifier_level)
 
@@ -918,33 +1031,74 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         self._air_quality_status = status_order[max(co2_idx, voc_idx)]
 
     def _calculate_ventilation_need(self) -> tuple[int, str]:
-        """Calculate required ventilation level based on air quality.
+        """Calculate required ventilation level based on air quality and temperature.
+
+        Combines CO2, VOC, indoor temperature, and the static minimum floor.
+        The highest contributor wins; ventilation_reason reflects that source.
 
         Returns:
-            Tuple of (level 0-4, reason string)
+            Tuple of (level 0-max, reason string)
         """
         max_levels = len(self._ventilation_levels) - 1
         co2_level = 0
         voc_level = 0
-        reason = VENT_REASON_NONE
+        temp_level = 0
 
         # Calculate CO2-based level (proportional)
         if self._cur_co2 is not None and self._cur_co2 >= self._co2_target:
             co2_range = self._co2_critical - self._co2_target
             co2_excess = self._cur_co2 - self._co2_target
-            co2_level = min(max_levels, int((co2_excess / co2_range) * max_levels) + 1)
-            if co2_level >= self._current_ventilation_level or self._current_ventilation_level == 0:
-                reason = VENT_REASON_CO2
+            if co2_range > 0:
+                co2_level = min(max_levels, int((co2_excess / co2_range) * max_levels) + 1)
+            else:
+                co2_level = max_levels
 
         # Calculate VOC-based level (proportional)
         if self._cur_voc is not None and self._cur_voc >= self._voc_target:
             voc_range = self._voc_critical - self._voc_target
             voc_excess = self._cur_voc - self._voc_target
-            voc_level = min(max_levels, int((voc_excess / voc_range) * max_levels) + 1)
-            if voc_level > co2_level:
-                reason = VENT_REASON_VOC
+            if voc_range > 0:
+                voc_level = min(max_levels, int((voc_excess / voc_range) * max_levels) + 1)
+            else:
+                voc_level = max_levels
 
-        return max(co2_level, voc_level), reason
+        # Calculate temperature-based level (proportional, clamped to configured range)
+        if (
+            self._temperature_sensor is not None
+            and self._cur_temperature is not None
+            and self._cur_temperature >= self._temperature_target
+        ):
+            temp_range = self._temperature_critical - self._temperature_target
+            temp_excess = self._cur_temperature - self._temperature_target
+            if temp_range > 0:
+                proportional = int(
+                    (temp_excess / temp_range)
+                    * (self._temperature_max_level - self._temperature_min_level + 1)
+                )
+                temp_level = min(
+                    self._temperature_max_level,
+                    self._temperature_min_level + proportional,
+                )
+            else:
+                temp_level = self._temperature_max_level
+
+        # Pick the winning source. Tie-breaker: temperature > co2 > voc > min_floor.
+        # This makes the visible reason match the most actionable cause.
+        candidates = [
+            (temp_level, VENT_REASON_TEMPERATURE),
+            (co2_level, VENT_REASON_CO2),
+            (voc_level, VENT_REASON_VOC),
+            (self._min_ventilation_level, VENT_REASON_MIN_FLOOR),
+        ]
+        # max() with key would not respect order on ties, so do it manually
+        best_level = 0
+        best_reason = VENT_REASON_NONE
+        for level, reason in candidates:
+            if level > best_level:
+                best_level = level
+                best_reason = reason
+
+        return best_level, best_reason
 
     def _calculate_humidifier_need(self) -> tuple[int, bool]:
         """Calculate required humidifier level based on humidity.
@@ -1009,7 +1163,9 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
     def _resolve_conflicts(self, vent_level: int, humidifier_level: int) -> tuple[int, int]:
         """Resolve conflicts between ventilation and humidification.
 
-        If humidity drops too low during ventilation, cap ventilation level.
+        If humidity drops too low during ventilation, cap ventilation level —
+        unless indoor temperature is at/above the critical threshold, in which
+        case cooling takes priority over over-drying protection.
 
         Returns:
             Adjusted (vent_level, humidifier_level)
@@ -1017,14 +1173,27 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         if self._cur_humidity is None or self._target_humidity is None:
             return vent_level, humidifier_level
 
+        # Temperature override: when it's critically hot, cooling wins.
+        temp_overrides = (
+            self._temperature_sensor is not None
+            and self._cur_temperature is not None
+            and self._cur_temperature >= self._temperature_critical
+        )
+
         # If humidity is critically low and we're ventilating, cap ventilation
         critical_low_humidity = 35.0  # Below this, cap ventilation
-        if self._cur_humidity < critical_low_humidity and vent_level > 2:
+        if self._cur_humidity < critical_low_humidity and vent_level > 2 and not temp_overrides:
             _LOGGER.debug(
                 "Capping ventilation to level 2 due to low humidity (%.1f%%)",
                 self._cur_humidity,
             )
             vent_level = 2
+        elif temp_overrides and self._cur_humidity < critical_low_humidity and vent_level > 2:
+            _LOGGER.debug(
+                "Skipping low-humidity cap: indoor temperature %.1f >= critical %.1f",
+                self._cur_temperature,
+                self._temperature_critical,
+            )
 
         return vent_level, humidifier_level
 

@@ -13,6 +13,40 @@
           "target_sensor": "Der zu überwachende Feuchtigkeitssensor"
         }
       },
+      "ventilation": {
+        "title": "Lüftungssteuerung",
+        "description": "Lüftungssystem für Luftaustausch und Entfeuchtung konfigurieren",
+        "data": {
+          "ventilation_entity": "Lüftungs-Entität",
+          "ventilation_levels": "Lüftungsstufen",
+          "humidity_dehumidify_critical": "Kritischer Feuchtigkeitsschwellwert (%)",
+          "min_ventilation_level": "Minimale Lüftungsstufe"
+        },
+        "data_description": {
+          "ventilation_entity": "Climate- oder Fan-Entität für die Lüftung",
+          "ventilation_levels": "Verfügbare Lüftungsstufen von Aus (0) bis Maximum",
+          "humidity_dehumidify_critical": "Feuchtigkeit, ab der maximale Lüftung erfolgt",
+          "min_ventilation_level": "Statischer Mindestwert: Lüftung sinkt nie darunter (Standard: 0)"
+        }
+      },
+      "temperature": {
+        "title": "Temperaturgesteuerte Lüftung",
+        "description": "Optional die Lüftungsstufe je nach Innentemperatur anheben (z. B. Sommerkühlung bei Sonneneinstrahlung).",
+        "data": {
+          "temperature_sensor": "Innentemperatursensor",
+          "temperature_target": "Temperatur-Zielwert (°C)",
+          "temperature_critical": "Temperatur-Kritischwert (°C)",
+          "temperature_min_level": "Mindeststufe oberhalb des Zielwerts",
+          "temperature_max_level": "Höchststufe ab dem Kritischwert"
+        },
+        "data_description": {
+          "temperature_sensor": "Innentemperatursensor (leer lassen, um zu deaktivieren)",
+          "temperature_target": "Innentemperatur, ab der die Lüftung hochfährt (Standard: 23°C)",
+          "temperature_critical": "Innentemperatur, bei der die Lüftung ihr temperaturgesteuertes Maximum erreicht. Ab diesem Wert wird der Niedrig-Feuchtigkeits-Schutz übergangen.",
+          "temperature_min_level": "Lüftungs-Mindeststufe, wenn die Zieltemperatur erreicht ist (Standard: 1)",
+          "temperature_max_level": "Obergrenze der temperaturgesteuerten Lüftung (Standard: höchste verfügbare Stufe)"
+        }
+      },
       "options": {
         "title": "Optionen",
         "description": "Zusätzliche Einstellungen für die Feuchtigkeitsregelung konfigurieren",
@@ -92,6 +126,18 @@
               "idle": "Leerlauf",
               "wet": "Befeuchten",
               "dry": "Entfeuchten"
+            }
+          },
+          "ventilation_reason": {
+            "name": "Lüftungsgrund",
+            "state": {
+              "none": "Keiner",
+              "co2": "CO2",
+              "voc": "VOC",
+              "humidity": "Hohe Feuchtigkeit",
+              "temperature": "Hohe Temperatur",
+              "min_floor": "Mindeststufe",
+              "boost": "Boost-Modus"
             }
           }
         }

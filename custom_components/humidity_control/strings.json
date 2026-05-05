@@ -53,12 +53,32 @@
         "data": {
           "ventilation_entity": "Ventilation entity",
           "ventilation_levels": "Ventilation fan levels",
-          "humidity_dehumidify_critical": "Critical humidity threshold (%)"
+          "humidity_dehumidify_critical": "Critical humidity threshold (%)",
+          "min_ventilation_level": "Minimum ventilation level"
         },
         "data_description": {
           "ventilation_entity": "Climate or fan entity for ventilation (e.g., climate.nilan_hvac)",
           "ventilation_levels": "Available fan levels from off (0) to maximum",
-          "humidity_dehumidify_critical": "Humidity level requiring maximum ventilation (default: 55%)"
+          "humidity_dehumidify_critical": "Humidity level requiring maximum ventilation (default: 55%)",
+          "min_ventilation_level": "Static floor: ventilation never drops below this level (default: 0 = off allowed)"
+        }
+      },
+      "temperature": {
+        "title": "Temperature-Driven Ventilation",
+        "description": "Optionally raise the ventilation floor based on indoor temperature. Useful for managing summer heat from solar gain.",
+        "data": {
+          "temperature_sensor": "Indoor temperature sensor",
+          "temperature_target": "Temperature target (°C)",
+          "temperature_critical": "Temperature critical (°C)",
+          "temperature_min_level": "Minimum level when above target",
+          "temperature_max_level": "Maximum level when at/above critical"
+        },
+        "data_description": {
+          "temperature_sensor": "Indoor temperature sensor entity (leave empty to disable)",
+          "temperature_target": "Indoor temperature above which the fan starts ramping up (default: 23°C)",
+          "temperature_critical": "Indoor temperature at which the fan reaches its temperature-driven maximum (default: 27°C). At or above this value, the low-humidity ventilation cap is bypassed.",
+          "temperature_min_level": "Ventilation floor when temperature reaches the target (default: 1)",
+          "temperature_max_level": "Cap on temperature-driven ventilation (default: maximum available level)"
         }
       },
       "options": {
@@ -118,6 +138,7 @@
           "humidifier": "Multi-level humidifier",
           "air_quality": "Air quality sensors",
           "ventilation": "Ventilation control",
+          "temperature": "Temperature-driven ventilation",
           "timing": "Timing & boost"
         }
       },
@@ -191,12 +212,32 @@
         "data": {
           "ventilation_entity": "Ventilation entity",
           "ventilation_levels": "Ventilation fan levels",
-          "humidity_dehumidify_critical": "Critical humidity threshold (%)"
+          "humidity_dehumidify_critical": "Critical humidity threshold (%)",
+          "min_ventilation_level": "Minimum ventilation level"
         },
         "data_description": {
           "ventilation_entity": "Climate or fan entity for ventilation",
           "ventilation_levels": "Available fan levels from off (0) to maximum",
-          "humidity_dehumidify_critical": "Humidity level requiring maximum ventilation"
+          "humidity_dehumidify_critical": "Humidity level requiring maximum ventilation",
+          "min_ventilation_level": "Static floor: ventilation never drops below this level"
+        }
+      },
+      "temperature": {
+        "title": "Temperature-Driven Ventilation",
+        "description": "Optionally raise the ventilation floor based on indoor temperature.",
+        "data": {
+          "temperature_sensor": "Indoor temperature sensor",
+          "temperature_target": "Temperature target (°C)",
+          "temperature_critical": "Temperature critical (°C)",
+          "temperature_min_level": "Minimum level when above target",
+          "temperature_max_level": "Maximum level when at/above critical"
+        },
+        "data_description": {
+          "temperature_sensor": "Indoor temperature sensor (leave empty to disable)",
+          "temperature_target": "Temperature above which the fan starts ramping up",
+          "temperature_critical": "Temperature at which the fan reaches its max; bypasses the low-humidity cap",
+          "temperature_min_level": "Ventilation floor when temperature reaches the target",
+          "temperature_max_level": "Cap on temperature-driven ventilation"
         }
       },
       "timing": {
@@ -246,6 +287,8 @@
               "co2": "CO2",
               "voc": "VOC",
               "humidity": "High humidity",
+              "temperature": "High temperature",
+              "min_floor": "Minimum floor",
               "boost": "Boost mode"
             }
           }

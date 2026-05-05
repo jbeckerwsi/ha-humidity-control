@@ -43,9 +43,15 @@ from .const import (
     CONF_MIN_HUMIDIFY_DURATION,
     CONF_MIN_HUMIDITY,
     CONF_MIN_VENTILATE_DURATION,
+    CONF_MIN_VENTILATION_LEVEL,
     CONF_SENSOR,
     CONF_STALE_DURATION,
     CONF_TARGET_HUMIDITY,
+    CONF_TEMPERATURE_CRITICAL,
+    CONF_TEMPERATURE_MAX_LEVEL,
+    CONF_TEMPERATURE_MIN_LEVEL,
+    CONF_TEMPERATURE_SENSOR,
+    CONF_TEMPERATURE_TARGET,
     CONF_VENTILATION_ENTITY,
     CONF_VENTILATION_LEVELS,
     CONF_VOC_CRITICAL,
@@ -58,7 +64,11 @@ from .const import (
     DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL,
     DEFAULT_MIN_HUMIDIFY_DURATION,
     DEFAULT_MIN_VENTILATE_DURATION,
+    DEFAULT_MIN_VENTILATION_LEVEL,
     DEFAULT_NAME,
+    DEFAULT_TEMPERATURE_CRITICAL,
+    DEFAULT_TEMPERATURE_MIN_LEVEL,
+    DEFAULT_TEMPERATURE_TARGET,
     DEFAULT_TOLERANCE,
     DEFAULT_VENTILATION_LEVELS,
     DEFAULT_VOC_CRITICAL,
@@ -96,6 +106,21 @@ HUMIDITY_CONTROL_SCHEMA = vol.Schema(
             CONF_HUMIDITY_DEHUMIDIFY_CRITICAL,
             default=DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL,
         ): vol.Coerce(float),
+        vol.Optional(CONF_MIN_VENTILATION_LEVEL, default=DEFAULT_MIN_VENTILATION_LEVEL): vol.Coerce(
+            int
+        ),
+        # Temperature-driven ventilation (e.g., summer cooling)
+        vol.Optional(CONF_TEMPERATURE_SENSOR): cv.entity_id,
+        vol.Optional(CONF_TEMPERATURE_TARGET, default=DEFAULT_TEMPERATURE_TARGET): vol.Coerce(
+            float
+        ),
+        vol.Optional(CONF_TEMPERATURE_CRITICAL, default=DEFAULT_TEMPERATURE_CRITICAL): vol.Coerce(
+            float
+        ),
+        vol.Optional(CONF_TEMPERATURE_MIN_LEVEL, default=DEFAULT_TEMPERATURE_MIN_LEVEL): vol.Coerce(
+            int
+        ),
+        vol.Optional(CONF_TEMPERATURE_MAX_LEVEL): vol.Coerce(int),
         # Humidity settings
         vol.Optional(CONF_MAX_HUMIDITY): vol.Coerce(float),
         vol.Optional(CONF_MIN_HUMIDITY): vol.Coerce(float),

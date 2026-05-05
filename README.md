@@ -16,6 +16,12 @@ A custom Home Assistant integration that provides unified indoor air quality con
 - **Proportional Control**: Fan speeds scale based on how far readings are from targets
 - **Simultaneous Operation**: Humidifier and ventilation can run together (e.g., high CO2 but low humidity)
 
+### Temperature-Driven Ventilation
+- **Summer Cooling**: Optionally raise the fan based on indoor temperature (e.g., when sun heats up the room)
+- **Proportional Ramp**: Fan scales between configured min/max levels as temp moves from target to critical
+- **Static Floor**: Independent `min_ventilation_level` keeps the fan running at a baseline level at all times
+- **Override**: At/above the critical temperature, the low-humidity ventilation cap is bypassed (cooling wins)
+
 ### Boost Mode
 - **Rapid Air Exchange**: Maximum ventilation for configurable duration (5-60 minutes)
 - **Multiple Triggers**: Activate via service call or input_boolean helper
@@ -104,7 +110,15 @@ humidity_control:
       - "4"
     humidity_dehumidify_threshold: 48
     humidity_dehumidify_critical: 35
-    
+    min_ventilation_level: 0  # static floor (0 = fan may turn off)
+
+    # Temperature-driven ventilation (summer cooling)
+    temperature_sensor: sensor.bme680_temperature
+    temperature_target: 23      # start ramping above this
+    temperature_critical: 27    # max temp-driven level here; bypasses low-humidity cap
+    temperature_min_level: 1    # floor when temp >= target
+    temperature_max_level: 3    # cap (defaults to highest available level if omitted)
+
     # Timing
     min_humidify_duration: 300  # 5 minutes
     min_ventilate_duration: 180  # 3 minutes
@@ -160,6 +174,22 @@ humidity_control:
 | `ventilation_levels` | ["0","1","2","3","4"] | Available fan mode levels |
 | `humidity_dehumidify_threshold` | 48 | Humidity % to start dehumidifying via ventilation |
 | `humidity_dehumidify_critical` | 35 | Humidity % to cap ventilation (protect from over-drying) |
+| `min_ventilation_level` | 0 | Static floor: fan never goes below this index (always-on baseline) |
+
+#### Temperature-Driven Ventilation
+Use this to keep the fan running in summer when the sun heats up the room. When the indoor
+temperature exceeds `temperature_target`, the fan is forced to at least `temperature_min_level`,
+and ramps proportionally up to `temperature_max_level` as the temperature approaches
+`temperature_critical`. At or above `temperature_critical`, the normal low-humidity ventilation
+cap (level 2 below 35% RH) is bypassed — cooling takes priority.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `temperature_sensor` | - | Indoor temperature sensor entity (omit to disable this feature) |
+| `temperature_target` | 23 | °C at which the fan starts ramping up |
+| `temperature_critical` | 27 | °C at which the fan reaches `temperature_max_level` and overrides the humidity cap |
+| `temperature_min_level` | 1 | Ventilation level when current temp ≥ target |
+| `temperature_max_level` | (max available) | Cap on temperature-driven ventilation |
 
 #### Timing
 | Variable | Default | Description |
@@ -223,7 +253,9 @@ target:
 | `humidifier_power` | Humidifier power state |
 | `humidifier_level` | Current humidifier level |
 | `ventilation_level` | Current ventilation level |
-| `ventilation_reason` | Why ventilation is active (co2/voc/humidity/boost/none) |
+| `ventilation_reason` | Why ventilation is active (co2/voc/humidity/temperature/min_floor/boost/none) |
+| `current_temperature` | Current indoor temperature (if sensor configured) |
+| `temperature_action` | Temperature ventilation status (good/ventilating/critical/unknown/disabled) |
 | `boost_active` | Whether boost mode is active |
 | `boost_end_time` | When boost mode will end |
 
@@ -245,7 +277,8 @@ target:
 3. Multiple triggers combine (highest need wins)
 
 ### Conflict Resolution
-- If humidity drops below `humidity_dehumidify_critical` (35%), ventilation is capped at level 2
+- If humidity drops below `humidity_dehumidify_critical` (35%), ventilation is normally capped at level 2
+- **Exception**: when an indoor `temperature_sensor` is configured and the current temperature is at or above `temperature_critical`, the cap is bypassed — summer cooling takes priority over over-drying protection
 - Humidifier and ventilation can run simultaneously when air quality needs ventilation but humidity is low
 
 ### Boost Mode
