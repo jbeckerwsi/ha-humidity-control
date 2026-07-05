@@ -271,8 +271,9 @@ async def _async_setup_config(
     humidity_dehumidify_critical: float = config.get(
         CONF_HUMIDITY_DEHUMIDIFY_CRITICAL, DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL
     )
-    min_ventilation_level: int = config.get(
-        CONF_MIN_VENTILATION_LEVEL, DEFAULT_MIN_VENTILATION_LEVEL
+    # NumberSelector always yields floats, so coerce level indices to int.
+    min_ventilation_level: int = int(
+        config.get(CONF_MIN_VENTILATION_LEVEL, DEFAULT_MIN_VENTILATION_LEVEL)
     )
 
     # Temperature-driven ventilation
@@ -281,10 +282,13 @@ async def _async_setup_config(
     temperature_critical: float = config.get(
         CONF_TEMPERATURE_CRITICAL, DEFAULT_TEMPERATURE_CRITICAL
     )
-    temperature_min_level: int = config.get(
-        CONF_TEMPERATURE_MIN_LEVEL, DEFAULT_TEMPERATURE_MIN_LEVEL
+    temperature_min_level: int = int(
+        config.get(CONF_TEMPERATURE_MIN_LEVEL, DEFAULT_TEMPERATURE_MIN_LEVEL)
     )
-    temperature_max_level: int | None = config.get(CONF_TEMPERATURE_MAX_LEVEL)
+    _temperature_max_level_raw = config.get(CONF_TEMPERATURE_MAX_LEVEL)
+    temperature_max_level: int | None = (
+        None if _temperature_max_level_raw is None else int(_temperature_max_level_raw)
+    )
 
     # Timing
     min_humidify_duration: int = config.get(
@@ -1321,8 +1325,8 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         if level == self._current_ventilation_level and reason == self._ventilation_reason:
             return  # No change needed
 
-        # Clamp level to valid range
-        level = max(0, min(level, len(self._ventilation_levels) - 1))
+        # Clamp level to valid range (int() guards against float indices)
+        level = int(max(0, min(level, len(self._ventilation_levels) - 1)))
         fan_mode = self._ventilation_levels[level]
 
         _LOGGER.debug(
