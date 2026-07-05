@@ -43,7 +43,6 @@ from .const import (
     CONF_INITIAL_STATE,
     CONF_KEEP_ALIVE,
     CONF_MAX_HUMIDITY,
-    CONF_MIN_DUR,
     CONF_MIN_HUMIDIFY_DURATION,
     CONF_MIN_HUMIDITY,
     CONF_MIN_VENTILATE_DURATION,
@@ -313,9 +312,6 @@ OPTIONS_SCHEMA = vol.Schema(
                 unit_of_measurement=PERCENTAGE,
                 mode=selector.NumberSelectorMode.BOX,
             )
-        ),
-        vol.Optional(CONF_MIN_DUR): selector.DurationSelector(
-            selector.DurationSelectorConfig(enable_day=False)
         ),
         vol.Optional(CONF_KEEP_ALIVE): selector.DurationSelector(
             selector.DurationSelectorConfig(enable_day=False)

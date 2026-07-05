@@ -19,7 +19,6 @@ CONF_INITIAL_STATE = "initial_state"
 CONF_AWAY_HUMIDITY = "away_humidity"
 CONF_AWAY_FIXED = "away_fixed"
 CONF_STALE_DURATION = "sensor_stale_duration"
-CONF_MIN_DUR = "min_cycle_duration"
 
 # Configuration keys - Multi-level humidifier
 CONF_HUMIDIFIER_POWER_ENTITY = "humidifier_power_entity"

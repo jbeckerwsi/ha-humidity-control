@@ -39,7 +39,6 @@ from .const import (
     CONF_INITIAL_STATE,
     CONF_KEEP_ALIVE,
     CONF_MAX_HUMIDITY,
-    CONF_MIN_DUR,
     CONF_MIN_HUMIDIFY_DURATION,
     CONF_MIN_HUMIDITY,
     CONF_MIN_VENTILATE_DURATION,
@@ -132,7 +131,6 @@ HUMIDITY_CONTROL_SCHEMA = vol.Schema(
         vol.Optional(CONF_INITIAL_STATE): cv.boolean,
         vol.Optional(CONF_AWAY_HUMIDITY): vol.Coerce(int),
         vol.Optional(CONF_AWAY_FIXED): cv.boolean,
-        vol.Optional(CONF_MIN_DUR): vol.All(cv.time_period, cv.positive_timedelta),
         vol.Optional(CONF_STALE_DURATION): vol.All(cv.time_period, cv.positive_timedelta),
         # Timing for new features
         vol.Optional(CONF_MIN_HUMIDIFY_DURATION, default=DEFAULT_MIN_HUMIDIFY_DURATION): vol.Coerce(

@@ -63,7 +63,6 @@ from homeassistant.core import (
     HomeAssistant,
     State,
 )
-from homeassistant.helpers import condition
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
@@ -115,7 +114,6 @@ from .const import (
     CONF_INITIAL_STATE,
     CONF_KEEP_ALIVE,
     CONF_MAX_HUMIDITY,
-    CONF_MIN_DUR,
     CONF_MIN_HUMIDIFY_DURATION,
     CONF_MIN_HUMIDITY,
     CONF_MIN_VENTILATE_DURATION,
@@ -301,7 +299,6 @@ async def _async_setup_config(
     min_humidity = _conf_opt_float(config, CONF_MIN_HUMIDITY)
     max_humidity = _conf_opt_float(config, CONF_MAX_HUMIDITY)
     target_humidity = _conf_opt_float(config, CONF_TARGET_HUMIDITY)
-    min_cycle_duration = _time_period_or_none(config.get(CONF_MIN_DUR))
     sensor_stale_duration = _time_period_or_none(config.get(CONF_STALE_DURATION))
     dry_tolerance = _conf_float(config, CONF_DRY_TOLERANCE, DEFAULT_TOLERANCE)
     wet_tolerance = _conf_float(config, CONF_WET_TOLERANCE, DEFAULT_TOLERANCE)
@@ -364,7 +361,6 @@ async def _async_setup_config(
                 min_humidity=min_humidity,
                 max_humidity=max_humidity,
                 target_humidity=target_humidity,
-                min_cycle_duration=min_cycle_duration,
                 dry_tolerance=dry_tolerance,
                 wet_tolerance=wet_tolerance,
                 keep_alive=keep_alive,
@@ -414,7 +410,6 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         min_humidity: float | None,
         max_humidity: float | None,
         target_humidity: float | None,
-        min_cycle_duration: timedelta | None,
         dry_tolerance: float,
         wet_tolerance: float,
         keep_alive: timedelta | None,
@@ -450,7 +445,6 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         self._name = name
         self._sensor_entity_id = sensor_entity_id
         self._device_class = HumidifierDeviceClass.HUMIDIFIER
-        self._min_cycle_duration = min_cycle_duration
         self._dry_tolerance = dry_tolerance
         self._wet_tolerance = wet_tolerance
         self._keep_alive = keep_alive
@@ -983,31 +977,33 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
                 await self._async_operate_boost()
                 return
 
-            # Calculate required ventilation level
+            # Calculate required ventilation level (air quality + temperature + min floor)
             vent_level, vent_reason = self._calculate_ventilation_need()
 
             # Calculate required humidifier level
             humidifier_level, humidify_needed = self._calculate_humidifier_need()
 
-            # Determine operating mode
-            if vent_level > 0 and humidify_needed:
+            # Dehumidification is driven through ventilation as well. Fold its
+            # (possibly higher) level into vent_level rather than treating it as
+            # a separate branch, so a non-zero min_ventilation_level or an
+            # air-quality level does not suppress the humidity-driven ramp.
+            if self._is_dehumidify_needed():
+                dehum_level, dehum_reason = self._calculate_dehumidify_ventilation()
+                if dehum_level > vent_level:
+                    vent_level = dehum_level
+                    vent_reason = dehum_reason
+
+            # Determine operating mode from the dominant driver
+            if humidify_needed and vent_level > 0:
                 new_mode = OP_MODE_VENTILATING_AND_HUMIDIFYING
-            elif vent_level > 0:
-                new_mode = OP_MODE_VENTILATING
             elif humidify_needed:
                 new_mode = OP_MODE_HUMIDIFYING
-            elif self._is_dehumidify_needed():
+            elif vent_reason == VENT_REASON_HUMIDITY:
                 new_mode = OP_MODE_DEHUMIDIFYING
-                vent_level, vent_reason = self._calculate_dehumidify_ventilation()
+            elif vent_level > 0:
+                new_mode = OP_MODE_VENTILATING
             else:
                 new_mode = OP_MODE_IDLE
-
-            # Dehumidify path skipped the air-quality/temperature/min-floor calculation,
-            # so make sure those still raise the floor here.
-            aq_level, aq_reason = self._calculate_ventilation_need()
-            if aq_level > vent_level:
-                vent_level = aq_level
-                vent_reason = aq_reason
 
             # Apply conflict resolution
             vent_level, humidifier_level = self._resolve_conflicts(vent_level, humidifier_level)
@@ -1442,21 +1438,6 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
     # =========================================================================
     # Helper Methods
     # =========================================================================
-
-    def _check_min_cycle(self) -> bool:
-        """Check if min_cycle_duration has elapsed for active entities."""
-        # Check humidifier power entity
-        if not self._humidifier_power_entity or not self._is_humidifier_power_on:
-            return True
-
-        return bool(
-            condition.state(
-                self.hass,
-                self._humidifier_power_entity,
-                STATE_ON,
-                self._min_cycle_duration,
-            )
-        )
 
     @property
     def _is_humidifier_power_on(self) -> bool:
