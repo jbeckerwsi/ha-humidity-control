@@ -146,6 +146,7 @@ from .const import (
     DEFAULT_TEMPERATURE_CRITICAL,
     DEFAULT_TEMPERATURE_MIN_LEVEL,
     DEFAULT_TEMPERATURE_TARGET,
+    DEFAULT_TOLERANCE,
     DEFAULT_VENTILATION_LEVELS,
     DEFAULT_VOC_CRITICAL,
     DEFAULT_VOC_TARGET,
@@ -232,74 +233,131 @@ def _time_period_or_none(value: Any) -> timedelta | None:
     return cast(timedelta, cv.time_period(value))
 
 
+# ---------------------------------------------------------------------------
+# Typed config extraction.
+#
+# The YAML path is coerced by HUMIDITY_CONTROL_SCHEMA (vol.Coerce(int/float)),
+# but the config-entry path passes ``options | data`` straight through, so the
+# raw values there are whatever the config-flow selectors produced. HA's
+# NumberSelector always yields floats, which is how a float once reached
+# ``self._ventilation_levels[level]`` and raised "list indices must be
+# integers".
+#
+# These helpers are the single coercing boundary for BOTH paths: each returns a
+# concrete type (not Any), so the values handed to HumidityControl are truthfully
+# typed and mypy/pyright can verify them against the constructor signature.
+# ---------------------------------------------------------------------------
+
+
+def _conf_str(config: Mapping[str, Any], key: str) -> str:
+    """Read a required string setting."""
+    return str(config[key])
+
+
+def _conf_opt_str(config: Mapping[str, Any], key: str) -> str | None:
+    """Read an optional string setting."""
+    value = config.get(key)
+    return None if value is None else str(value)
+
+
+def _conf_int(config: Mapping[str, Any], key: str, default: int) -> int:
+    """Read an int setting, coercing NumberSelector floats to int."""
+    return int(config.get(key, default))
+
+
+def _conf_opt_int(config: Mapping[str, Any], key: str) -> int | None:
+    """Read an optional int setting, coercing NumberSelector floats to int."""
+    value = config.get(key)
+    return None if value is None else int(value)
+
+
+def _conf_float(config: Mapping[str, Any], key: str, default: float) -> float:
+    """Read a float setting."""
+    return float(config.get(key, default))
+
+
+def _conf_opt_float(config: Mapping[str, Any], key: str) -> float | None:
+    """Read an optional float setting."""
+    value = config.get(key)
+    return None if value is None else float(value)
+
+
+def _conf_opt_bool(config: Mapping[str, Any], key: str) -> bool | None:
+    """Read an optional boolean setting."""
+    value = config.get(key)
+    return None if value is None else bool(value)
+
+
+def _conf_str_list(config: Mapping[str, Any], key: str, default: list[str]) -> list[str]:
+    """Read a list-of-strings setting."""
+    value = config.get(key, default)
+    return [str(item) for item in value]
+
+
 async def _async_setup_config(
     hass: HomeAssistant,
     config: Mapping[str, Any],
     unique_id: str | None,
     async_add_entities: AddEntitiesCallback | AddConfigEntryEntitiesCallback,
 ) -> None:
-    name: str = config[CONF_NAME]
-    sensor_entity_id: str = config[CONF_SENSOR]
-    min_humidity: float | None = config.get(CONF_MIN_HUMIDITY)
-    max_humidity: float | None = config.get(CONF_MAX_HUMIDITY)
-    target_humidity: float | None = config.get(CONF_TARGET_HUMIDITY)
-    min_cycle_duration: timedelta | None = _time_period_or_none(config.get(CONF_MIN_DUR))
-    sensor_stale_duration: timedelta | None = _time_period_or_none(config.get(CONF_STALE_DURATION))
-    dry_tolerance: float = config.get(CONF_DRY_TOLERANCE, 3.0)
-    wet_tolerance: float = config.get(CONF_WET_TOLERANCE, 3.0)
-    keep_alive: timedelta | None = _time_period_or_none(config.get(CONF_KEEP_ALIVE))
-    initial_state: bool | None = config.get(CONF_INITIAL_STATE)
-    away_humidity: int | None = config.get(CONF_AWAY_HUMIDITY)
-    away_fixed: bool | None = config.get(CONF_AWAY_FIXED)
+    name = _conf_str(config, CONF_NAME)
+    sensor_entity_id = _conf_str(config, CONF_SENSOR)
+    min_humidity = _conf_opt_float(config, CONF_MIN_HUMIDITY)
+    max_humidity = _conf_opt_float(config, CONF_MAX_HUMIDITY)
+    target_humidity = _conf_opt_float(config, CONF_TARGET_HUMIDITY)
+    min_cycle_duration = _time_period_or_none(config.get(CONF_MIN_DUR))
+    sensor_stale_duration = _time_period_or_none(config.get(CONF_STALE_DURATION))
+    dry_tolerance = _conf_float(config, CONF_DRY_TOLERANCE, DEFAULT_TOLERANCE)
+    wet_tolerance = _conf_float(config, CONF_WET_TOLERANCE, DEFAULT_TOLERANCE)
+    keep_alive = _time_period_or_none(config.get(CONF_KEEP_ALIVE))
+    initial_state = _conf_opt_bool(config, CONF_INITIAL_STATE)
+    away_humidity = _conf_opt_int(config, CONF_AWAY_HUMIDITY)
+    away_fixed = _conf_opt_bool(config, CONF_AWAY_FIXED)
 
     # New multi-level humidifier config
-    humidifier_power_entity: str | None = config.get(CONF_HUMIDIFIER_POWER_ENTITY)
-    humidifier_level_entity: str | None = config.get(CONF_HUMIDIFIER_LEVEL_ENTITY)
-    humidifier_levels: list[str] = config.get(CONF_HUMIDIFIER_LEVELS, DEFAULT_HUMIDIFIER_LEVELS)
+    humidifier_power_entity = _conf_opt_str(config, CONF_HUMIDIFIER_POWER_ENTITY)
+    humidifier_level_entity = _conf_opt_str(config, CONF_HUMIDIFIER_LEVEL_ENTITY)
+    humidifier_levels = _conf_str_list(config, CONF_HUMIDIFIER_LEVELS, DEFAULT_HUMIDIFIER_LEVELS)
 
     # Air quality sensors
-    co2_sensor: str | None = config.get(CONF_CO2_SENSOR)
-    co2_target: int = config.get(CONF_CO2_TARGET, DEFAULT_CO2_TARGET)
-    co2_critical: int = config.get(CONF_CO2_CRITICAL, DEFAULT_CO2_CRITICAL)
-    voc_sensor: str | None = config.get(CONF_VOC_SENSOR)
-    voc_target: int = config.get(CONF_VOC_TARGET, DEFAULT_VOC_TARGET)
-    voc_critical: int = config.get(CONF_VOC_CRITICAL, DEFAULT_VOC_CRITICAL)
+    co2_sensor = _conf_opt_str(config, CONF_CO2_SENSOR)
+    co2_target = _conf_int(config, CONF_CO2_TARGET, DEFAULT_CO2_TARGET)
+    co2_critical = _conf_int(config, CONF_CO2_CRITICAL, DEFAULT_CO2_CRITICAL)
+    voc_sensor = _conf_opt_str(config, CONF_VOC_SENSOR)
+    voc_target = _conf_int(config, CONF_VOC_TARGET, DEFAULT_VOC_TARGET)
+    voc_critical = _conf_int(config, CONF_VOC_CRITICAL, DEFAULT_VOC_CRITICAL)
 
     # Ventilation config
-    ventilation_entity: str | None = config.get(CONF_VENTILATION_ENTITY)
-    ventilation_levels: list[str] = config.get(CONF_VENTILATION_LEVELS, DEFAULT_VENTILATION_LEVELS)
-    humidity_dehumidify_critical: float = config.get(
-        CONF_HUMIDITY_DEHUMIDIFY_CRITICAL, DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL
+    ventilation_entity = _conf_opt_str(config, CONF_VENTILATION_ENTITY)
+    ventilation_levels = _conf_str_list(config, CONF_VENTILATION_LEVELS, DEFAULT_VENTILATION_LEVELS)
+    humidity_dehumidify_critical = _conf_float(
+        config, CONF_HUMIDITY_DEHUMIDIFY_CRITICAL, DEFAULT_HUMIDITY_DEHUMIDIFY_CRITICAL
     )
-    # NumberSelector always yields floats, so coerce level indices to int.
-    min_ventilation_level: int = int(
-        config.get(CONF_MIN_VENTILATION_LEVEL, DEFAULT_MIN_VENTILATION_LEVEL)
+    min_ventilation_level = _conf_int(
+        config, CONF_MIN_VENTILATION_LEVEL, DEFAULT_MIN_VENTILATION_LEVEL
     )
 
     # Temperature-driven ventilation
-    temperature_sensor: str | None = config.get(CONF_TEMPERATURE_SENSOR)
-    temperature_target: float = config.get(CONF_TEMPERATURE_TARGET, DEFAULT_TEMPERATURE_TARGET)
-    temperature_critical: float = config.get(
-        CONF_TEMPERATURE_CRITICAL, DEFAULT_TEMPERATURE_CRITICAL
+    temperature_sensor = _conf_opt_str(config, CONF_TEMPERATURE_SENSOR)
+    temperature_target = _conf_float(config, CONF_TEMPERATURE_TARGET, DEFAULT_TEMPERATURE_TARGET)
+    temperature_critical = _conf_float(
+        config, CONF_TEMPERATURE_CRITICAL, DEFAULT_TEMPERATURE_CRITICAL
     )
-    temperature_min_level: int = int(
-        config.get(CONF_TEMPERATURE_MIN_LEVEL, DEFAULT_TEMPERATURE_MIN_LEVEL)
+    temperature_min_level = _conf_int(
+        config, CONF_TEMPERATURE_MIN_LEVEL, DEFAULT_TEMPERATURE_MIN_LEVEL
     )
-    _temperature_max_level_raw = config.get(CONF_TEMPERATURE_MAX_LEVEL)
-    temperature_max_level: int | None = (
-        None if _temperature_max_level_raw is None else int(_temperature_max_level_raw)
-    )
+    temperature_max_level = _conf_opt_int(config, CONF_TEMPERATURE_MAX_LEVEL)
 
     # Timing
-    min_humidify_duration: int = config.get(
-        CONF_MIN_HUMIDIFY_DURATION, DEFAULT_MIN_HUMIDIFY_DURATION
+    min_humidify_duration = _conf_int(
+        config, CONF_MIN_HUMIDIFY_DURATION, DEFAULT_MIN_HUMIDIFY_DURATION
     )
-    min_ventilate_duration: int = config.get(
-        CONF_MIN_VENTILATE_DURATION, DEFAULT_MIN_VENTILATE_DURATION
+    min_ventilate_duration = _conf_int(
+        config, CONF_MIN_VENTILATE_DURATION, DEFAULT_MIN_VENTILATE_DURATION
     )
 
     # Boost helper
-    boost_helper: str | None = config.get(CONF_BOOST_HELPER)
+    boost_helper = _conf_opt_str(config, CONF_BOOST_HELPER)
 
     async_add_entities(
         [
@@ -603,7 +661,7 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
             self._remove_stale_tracking()
         if self._remove_boost_timer:
             self._remove_boost_timer()
-        return await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_hass()
 
     @property
     def available(self) -> bool:
@@ -773,14 +831,14 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         """Return the minimum humidity."""
         if self._min_humidity:
             return self._min_humidity
-        return super().min_humidity
+        return float(super().min_humidity)
 
     @property
     def max_humidity(self) -> float:
         """Return the maximum humidity."""
         if self._max_humidity:
             return self._max_humidity
-        return super().max_humidity
+        return float(super().max_humidity)
 
     # =========================================================================
     # Sensor Event Handlers
@@ -1206,14 +1264,14 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         if self._last_humidifier_change is None:
             return True
         elapsed = dt_util.utcnow() - self._last_humidifier_change
-        return elapsed >= self._min_humidify_duration
+        return bool(elapsed >= self._min_humidify_duration)
 
     def _can_change_ventilation(self) -> bool:
         """Check if minimum ventilation duration has passed."""
         if self._last_ventilation_change is None:
             return True
         elapsed = dt_util.utcnow() - self._last_ventilation_change
-        return elapsed >= self._min_ventilate_duration
+        return bool(elapsed >= self._min_ventilate_duration)
 
     def _get_current_humidifier_level_index(self) -> int:
         """Get the current humidifier level as an index."""
@@ -1417,11 +1475,13 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         if not self._humidifier_power_entity or not self._is_humidifier_power_on:
             return True
 
-        return condition.state(
-            self.hass,
-            self._humidifier_power_entity,
-            STATE_ON,
-            self._min_cycle_duration,
+        return bool(
+            condition.state(
+                self.hass,
+                self._humidifier_power_entity,
+                STATE_ON,
+                self._min_cycle_duration,
+            )
         )
 
     @property
@@ -1429,7 +1489,7 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         """Check if the humidifier power entity is on."""
         if not self._humidifier_power_entity:
             return False
-        return self.hass.states.is_state(self._humidifier_power_entity, STATE_ON)
+        return bool(self.hass.states.is_state(self._humidifier_power_entity, STATE_ON))
 
     async def _async_entity_turn_on(self, entity_id: str | None) -> None:
         """Turn an output entity on."""
