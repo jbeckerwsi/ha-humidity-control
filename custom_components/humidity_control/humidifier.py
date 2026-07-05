@@ -62,7 +62,6 @@ from homeassistant.core import (
     EventStateReportedData,
     HomeAssistant,
     State,
-    callback,
 )
 from homeassistant.helpers import condition
 from homeassistant.helpers import config_validation as cv
@@ -151,10 +150,7 @@ from .const import (
     DEFAULT_VOC_CRITICAL,
     DEFAULT_VOC_TARGET,
     MODE_AWAY,
-    MODE_DRY,
-    MODE_IDLE,
     MODE_NORMAL,
-    MODE_WET,
     OP_MODE_BOOST,
     OP_MODE_DEHUMIDIFYING,
     OP_MODE_HUMIDIFYING,
@@ -477,9 +473,6 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         self._is_away = False
         self._attr_action = HumidifierAction.IDLE
         self._attr_unique_id = unique_id
-
-        # Track operating mode: idle, wet, or dry (legacy)
-        self._operating_mode = MODE_IDLE
 
         # New: Multi-level humidifier (Robby)
         self._humidifier_power_entity = humidifier_power_entity
@@ -919,37 +912,6 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         _LOGGER.warning("Sensor is stalled, call the emergency stop")
         await self._async_update_humidity("Stalled")
 
-    @callback
-    def _async_output_event(self, event: Event[EventStateChangedData]) -> None:
-        """Handle output entity state changes."""
-        self._async_output_changed(event.data["new_state"])
-
-    @callback
-    def _async_output_changed(self, new_state: State | None) -> None:
-        """Handle output entity state changes."""
-        if new_state is None:
-            return
-
-        # Update operating mode based on output states
-        self._update_operating_mode_from_outputs()
-        self.async_write_ha_state()
-
-    def _update_operating_mode_from_outputs(self) -> None:
-        """Update operating mode based on current output states."""
-        # This is called when legacy wet/dry entities change state
-        wet_active = self._is_wet_active
-        dry_active = self._is_dry_active
-
-        if wet_active and not dry_active:
-            self._operating_mode = MODE_WET
-            self._attr_action = HumidifierAction.HUMIDIFYING
-        elif dry_active and not wet_active:
-            self._operating_mode = MODE_DRY
-            self._attr_action = HumidifierAction.DRYING
-        else:
-            self._operating_mode = MODE_IDLE
-            self._attr_action = HumidifierAction.IDLE
-
     # =========================================================================
     # Sensor Value Updates
     # =========================================================================
@@ -1219,7 +1181,13 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
         if humidity_excess <= 0:
             return 0, VENT_REASON_NONE
 
-        level = min(max_levels, int((humidity_excess / humidity_range) * max_levels) + 1)
+        # Guard against a zero/negative range (critical <= start threshold),
+        # which would otherwise raise ZeroDivisionError. At/above critical any
+        # excess means go straight to maximum ventilation.
+        if humidity_range > 0:
+            level = min(max_levels, int((humidity_excess / humidity_range) * max_levels) + 1)
+        else:
+            level = max_levels
         return level, VENT_REASON_HUMIDITY
 
     def _resolve_conflicts(self, vent_level: int, humidifier_level: int) -> tuple[int, int]:
@@ -1457,7 +1425,13 @@ class HumidityControl(HumidifierEntity, RestoreEntity):
                         "option": level_name,
                     },
                 )
-                self._current_humidifier_level = level_name
+
+            # Track the current level regardless of whether a level entity is
+            # configured. For a power-only humidifier this is what lets
+            # _get_current_humidifier_level_index() report a non-zero index, so
+            # a later _async_set_humidifier_level(0) actually turns the power
+            # off instead of seeing "already at 0" and returning.
+            self._current_humidifier_level = level_name
 
             # Turn on if not already on
             if not self._is_humidifier_power_on:
