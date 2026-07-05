@@ -7,7 +7,7 @@ A custom Home Assistant integration that provides unified indoor air quality con
 ### Humidity Control
 - **Multi-level Humidifier Support**: Control humidifiers with multiple fan speeds (e.g., Robby with power switch + level selector)
 - **Dehumidification via Ventilation**: Use HVAC/ventilation systems to reduce humidity
-- **Target Range**: Maintain humidity between configurable thresholds (default: 40-46%)
+- **Target Range**: Maintain humidity around a configurable target using dry/wet tolerances
 - **Critical Protection**: Cap ventilation when humidity drops critically low (<35%)
 
 ### Air Quality Control
@@ -38,7 +38,7 @@ A custom Home Assistant integration that provides unified indoor air quality con
 |------|-------------|
 | `idle` | All readings within target range |
 | `humidifying` | Humidity below target, humidifier active |
-| `dehumidifying` | Humidity above threshold, ventilation active |
+| `dehumidifying` | Humidity above target + wet_tolerance, ventilation active |
 | `ventilating` | CO2/VOC elevated, ventilation active |
 | `ventilating_and_humidifying` | Air quality needs ventilation, but humidity also low |
 | `boost` | Manual boost mode active |
@@ -108,8 +108,7 @@ humidity_control:
       - "2"
       - "3"
       - "4"
-    humidity_dehumidify_threshold: 48
-    humidity_dehumidify_critical: 35
+    humidity_dehumidify_critical: 55  # RH% where dehumidify ventilation ramps to max
     min_ventilation_level: 0  # static floor (0 = fan may turn off)
 
     # Temperature-driven ventilation (summer cooling)
@@ -151,12 +150,6 @@ humidity_control:
 | `humidifier_level_entity` | - | Level selector entity (e.g., `select.robby_fan_level`) |
 | `humidifier_levels` | ["1","2","3"] | Available fan level options |
 
-#### Legacy Humidifier/Dehumidifier (simple on/off)
-| Variable | Description |
-|----------|-------------|
-| `wet_entity` | Entity ID of simple humidifier switch |
-| `dry_entity` | Entity ID of simple dehumidifier switch |
-
 #### Air Quality
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -172,8 +165,7 @@ humidity_control:
 |----------|---------|-------------|
 | `ventilation_entity` | - | Climate entity for ventilation (e.g., `climate.nilan_hvac`) |
 | `ventilation_levels` | ["0","1","2","3","4"] | Available fan mode levels |
-| `humidity_dehumidify_threshold` | 48 | Humidity % to start dehumidifying via ventilation |
-| `humidity_dehumidify_critical` | 35 | Humidity % to cap ventilation (protect from over-drying) |
+| `humidity_dehumidify_critical` | 55 | Humidity % at which dehumidification ventilation reaches maximum |
 | `min_ventilation_level` | 0 | Static floor: fan never goes below this index (always-on baseline) |
 
 #### Temperature-Driven Ventilation
@@ -196,7 +188,6 @@ cap (level 2 below 35% RH) is bypassed — cooling takes priority.
 |----------|---------|-------------|
 | `min_humidify_duration` | 300 | Minimum seconds to run humidifier |
 | `min_ventilate_duration` | 180 | Minimum seconds to run ventilation |
-| `min_cycle_duration` | - | Legacy: minimum time between switching |
 | `keep_alive` | - | Interval to resend commands |
 | `sensor_stale_duration` | - | Turn off if sensor doesn't update |
 
@@ -264,9 +255,8 @@ target:
 ### Humidity Control
 1. When humidity drops below `target - dry_tolerance`:
    - Multi-level humidifier: Activates power, sets proportional level
-   - Legacy humidifier: Turns on wet entity
-2. When humidity rises above `humidity_dehumidify_threshold`:
-   - Activates ventilation to reduce humidity
+2. When humidity rises above `target + wet_tolerance`:
+   - Activates ventilation to reduce humidity (ramping up to `humidity_dehumidify_critical`)
 3. Humidity level determines humidifier fan speed (proportional control)
 
 ### Air Quality Control
@@ -277,7 +267,7 @@ target:
 3. Multiple triggers combine (highest need wins)
 
 ### Conflict Resolution
-- If humidity drops below `humidity_dehumidify_critical` (35%), ventilation is normally capped at level 2
+- If humidity drops below 35%, ventilation is normally capped at level 2
 - **Exception**: when an indoor `temperature_sensor` is configured and the current temperature is at or above `temperature_critical`, the cap is bypassed — summer cooling takes priority over over-drying protection
 - Humidifier and ventilation can run simultaneously when air quality needs ventilation but humidity is low
 
